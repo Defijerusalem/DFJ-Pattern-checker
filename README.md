@@ -169,6 +169,62 @@ Every check ends with two outputs:
 
 Both outputs end with an explicit scope reminder: this is a pattern check, not an audit, and NOT PRESENT does not mean safe.
 
+## Pre-deployment design review
+
+`PRE_DEPLOYMENT_TEMPLATE.md` is a companion tool for teams building a new protocol, not just for checking existing ones. Fill it in **before writing code** — before your first design review — and run it through the checker to surface structural decisions that have already cost the industry money, before you make them.
+
+### When to use it
+
+- Before your first design review meeting
+- When scoping an audit (the answers tell your auditors exactly what to look at)
+- When evaluating a third-party protocol to integrate as collateral, an oracle source, or a yield strategy
+- When adding a new chain deployment to an existing protocol
+
+### How to fill it in
+
+1. **Start with Section 1** — pick your category and list your target chains
+2. **Fill in only your relevant category sections** — each section says "Skip if not applicable"
+3. **Always complete Sections 8–11** — Governance/Admin, Supply Chain, Audit Scope, and Multi-Chain Consistency apply to every protocol type
+4. **Leave genuinely unknown answers blank** — don't guess to fill space. A blank is a CANNOT DETERMINE finding, which is honest and actionable. A wrong answer is worse than no answer
+
+### How to run it through the checker
+
+```
+/dfj-pattern-checker @PRE_DEPLOYMENT_TEMPLATE.md
+```
+
+Or paste it inline. The checker reads it the same way it reads a live protocol — it just doesn't need to search for information because you've provided it.
+
+### What the findings mean at design stage
+
+| Finding | What it means |
+|---|---|
+| **EXACT MATCH** | You've described a mechanism that has already caused real losses elsewhere. Redesign before proceeding. |
+| **SIMILAR MATCH** | The design resembles a known risk pattern — human review needed before committing to this approach. |
+| **NOT PRESENT** | This specific pattern isn't in your design. Does not mean the design is safe. |
+| **CANNOT DETERMINE** | You left this blank. This is a decision that needs to be made before deployment. |
+
+CANNOT DETERMINE is the most actionable output at this stage — each one is a gap in your design that needs an answer before you write code.
+
+### Recommended workflow
+
+```
+Fill template → run checker → review findings
+       ↓
+   EXACT MATCH?       → redesign that component
+   SIMILAR MATCH?     → get a second opinion before committing
+   CANNOT DETERMINE?  → make the decision, update the template, re-run
+       ↓
+  Hand completed template + checker output to your auditor
+  as the starting point for audit scope definition
+       ↓
+  Deploy
+```
+
+**A finding before deployment is a decision. A finding after deployment is a loss.**
+
+---
+
 ## Confidence levels, explained plainly
 
 - **EXACT MATCH** — the specific failure mechanism is present. High confidence.
