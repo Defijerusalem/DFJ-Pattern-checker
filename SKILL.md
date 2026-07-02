@@ -26,51 +26,9 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
    **Post-deployment (live protocol):** The user names a live protocol and provides or requests contract code, audit reports, and documentation. This is the standard workflow described in steps 1–12 below.
 
    **How to tell which mode you are in:**
-   - If the user submits a completed `PRE_DEPLOYMENT_TEMPLATE.md` or equivalent filled document — run the pre-deployment check directly against it (workflow below).
-   - If the user describes a protocol they are building in plain language without a filled template — enter **conversational intake mode** (see below).
-   - If the user names an existing protocol or provides a contract address — this is a post-deployment check, proceed to Step 1.
+   - If the user submits a document, template, or description of a protocol they are *building*, this is a pre-deployment check.
+   - If the user names an existing protocol or provides a contract address, this is a post-deployment check.
    - If unclear, ask: "Is this protocol already deployed, or are you checking a design before building?"
-
-   ---
-
-   **Conversational Intake Mode**
-
-   When a user says they are building a protocol but has not filled in the template, do not ask them to fill it in manually. Instead, conduct a structured interview and generate the spec from their answers.
-
-   **How it works:**
-
-   a. **Open with one question:** "What are you building?" — get the protocol type and a brief description. Do not ask multiple questions at once.
-
-   b. **Identify the category from their answer.** Load the relevant reference file(s) silently. Then ask only the questions that map to patterns in those files — do not ask questions about categories that do not apply.
-
-   c. **Ask one question at a time.** Move through the relevant sections of the template in order. Do not front-load all questions. Wait for each answer before asking the next one.
-
-   d. **Accept plain language answers.** The user does not need to know DeFi security terminology. If they say "a backend service holds the key that mints tokens," that is enough to check against Stablecoin Pattern 1. Translate their language into pattern criteria internally — do not make them do it.
-
-   e. **Flag undecided answers immediately.** If the user says "we haven't decided that yet" or "I'm not sure," flag it immediately as a CANNOT DETERMINE finding and note it must be resolved before deployment. Do not wait until the end to surface it.
-
-   f. **When enough information has been gathered** — either all relevant pattern questions have been answered, or the user indicates the design is complete — generate the spec automatically:
-      - Write out the filled `PRE_DEPLOYMENT_TEMPLATE.md` from the conversation
-      - Save it as a file the user can keep
-      - Immediately run the pre-deployment check against it without asking the user to do anything else
-
-   g. **Output the findings** following the pre-deployment workflow below. The user never sees the template as a form to fill in — they just have a conversation and get findings.
-
-   ---
-
-   **Example intake conversation:**
-
-   User: "I'm building a stablecoin backed by ETH and US Treasuries."
-   Checker: "Who or what authorises new tokens to be minted — is it an on-chain smart contract with enforced rules, a multisig, or a single key?"
-   User: "A backend service. The key is stored in AWS."
-   Checker: [internally: Stablecoin Pattern 1 — EXACT MATCH candidate]
-   Checker: "Is there an on-chain cap on how much can be minted per transaction or per day?"
-   User: "Not yet."
-   Checker: [flags: CANNOT DETERMINE — no on-chain cap defined]
-   Checker: "Who manages the US Treasury exposure off-chain, and how is the backing verified on-chain?"
-   ...and so on until findings are complete.
-
-   ---
 
    **Pre-deployment check workflow:**
 
@@ -86,7 +44,7 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
    f. **Close with a prioritised fix list.** For every EXACT MATCH or CANNOT DETERMINE finding, state: what the finding is, what the known failure looks like (cite the real incident from the reference file), and what a clean design decision looks like instead. Order findings by severity — EXACT MATCH first, then CANNOT DETERMINE, then SIMILAR MATCH.
 
-1. **Check whether the protocol is still operating before running a full pattern scan.** A meaningful share of protocols that would otherwise be flagged by this library turn out to be shut down, in formal wind-down, operating at a small fraction of historical scale, or actively frozen/in incident response by the time they're checked — this has happened often enough in testing that it must be checked first, not discovered partway through. State whichever of these applies plainly as the first thing in the output, before any pattern findings:
+ A meaningful share of protocols that would otherwise be flagged by this library turn out to be shut down, in formal wind-down, operating at a small fraction of historical scale, or actively frozen/in incident response by the time they're checked — this has happened often enough in testing that it must be checked first, not discovered partway through. State whichever of these applies plainly as the first thing in the output, before any pattern findings:
    - **Shut down:** e.g., "This protocol shut down in [month/year]."
    - **Formal wind-down:** e.g., "This protocol is in formal wind-down, with current TVL of $X compared to a peak of $Y."
    - **Actively frozen / mid-incident-response:** a distinct status from the two above — the protocol has not shut down or wound down, but funds or contracts are currently paused or frozen following a recent incident, often before a post-mortem has been published. State this plainly too, e.g., "This protocol's vaults/contracts are currently frozen following a [date] incident; a full post-mortem had not been published as of this check." Treat the specific technical root cause as CANNOT DETERMINE if no post-mortem exists yet, even if the general failure category (e.g., access control, oracle manipulation) is reported in early coverage — early reporting on an unresolved incident is a lower-confidence source than a completed post-mortem.
