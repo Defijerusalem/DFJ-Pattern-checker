@@ -17,7 +17,34 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 ## Workflow
 
-1. **Check whether the protocol is still operating before running a full pattern scan.** A meaningful share of protocols that would otherwise be flagged by this library turn out to be shut down, in formal wind-down, operating at a small fraction of historical scale, or actively frozen/in incident response by the time they're checked — this has happened often enough in testing that it must be checked first, not discovered partway through. State whichever of these applies plainly as the first thing in the output, before any pattern findings:
+0. **Determine whether this is a pre-deployment design check or a post-deployment protocol check.**
+
+   This skill can operate at two points in a protocol's lifecycle:
+
+   **Pre-deployment (design review):** The user submits a completed `PRE_DEPLOYMENT_TEMPLATE.md` or equivalent design spec document describing a protocol that has not yet been deployed. No live contracts exist to check. The input is the design decisions themselves — oracle choice, mint authority structure, bridge verifier configuration, admin key setup — described in plain language or a structured document.
+
+   **Post-deployment (live protocol):** The user names a live protocol and provides or requests contract code, audit reports, and documentation. This is the standard workflow described in steps 1–12 below.
+
+   **How to tell which mode you are in:**
+   - If the user submits a document, template, or description of a protocol they are *building*, this is a pre-deployment check.
+   - If the user names an existing protocol or provides a contract address, this is a post-deployment check.
+   - If unclear, ask: "Is this protocol already deployed, or are you checking a design before building?"
+
+   **Pre-deployment check workflow:**
+
+   a. **Confirm operating status is N/A.** The protocol does not exist yet — skip Step 1's operating status check entirely.
+
+   b. **Identify the category from the template's Section 1.** Proceed to load the relevant reference file(s) exactly as in Step 3 below.
+
+   c. **Check each pattern against the design decisions, not live contract data.** The underlying question for every pattern is the same — only the evidence source changes. Instead of reading a contract's multisig threshold on-chain, you read the threshold stated in the design document. Instead of checking a live oracle configuration, you check the oracle design described in the spec.
+
+   d. **Treat blank or unanswered fields as CANNOT DETERMINE, not as NOT PRESENT.** A blank answer means the design decision has not been made yet — this is the most important finding a pre-deployment check can surface. Flag every blank field in a relevant section explicitly: "This decision has not been documented. It must be made and reviewed before deployment."
+
+   e. **Output pre-deployment findings, not a score.** The output is a list of design decisions that match known failure patterns, decisions that are undocumented (CANNOT DETERMINE), and decisions that are clean (NOT PRESENT). Do not produce a numeric score — the protocol is not live and the full methodology cannot be applied. State clearly: "These are pre-deployment findings against known structural failure patterns. They reflect design decisions, not deployed code. A clean result here does not mean the implementation will be safe."
+
+   f. **Close with a prioritised fix list.** For every EXACT MATCH or CANNOT DETERMINE finding, state: what the finding is, what the known failure looks like (cite the real incident from the reference file), and what a clean design decision looks like instead. Order findings by severity — EXACT MATCH first, then CANNOT DETERMINE, then SIMILAR MATCH.
+
+ A meaningful share of protocols that would otherwise be flagged by this library turn out to be shut down, in formal wind-down, operating at a small fraction of historical scale, or actively frozen/in incident response by the time they're checked — this has happened often enough in testing that it must be checked first, not discovered partway through. State whichever of these applies plainly as the first thing in the output, before any pattern findings:
    - **Shut down:** e.g., "This protocol shut down in [month/year]."
    - **Formal wind-down:** e.g., "This protocol is in formal wind-down, with current TVL of $X compared to a peak of $Y."
    - **Actively frozen / mid-incident-response:** a distinct status from the two above — the protocol has not shut down or wound down, but funds or contracts are currently paused or frozen following a recent incident, often before a post-mortem has been published. State this plainly too, e.g., "This protocol's vaults/contracts are currently frozen following a [date] incident; a full post-mortem had not been published as of this check." Treat the specific technical root cause as CANNOT DETERMINE if no post-mortem exists yet, even if the general failure category (e.g., access control, oracle manipulation) is reported in early coverage — early reporting on an unresolved incident is a lower-confidence source than a completed post-mortem.
@@ -95,6 +122,7 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 ## Reference files
 
+- `PRE_DEPLOYMENT_TEMPLATE.md` — structured design review template for protocols not yet deployed. Submit this filled-in document to trigger a pre-deployment check (Step 0 above) instead of a live protocol check.
 - `references/lending.md` — collateral concentration, cross-chain backing dependency, exotic token integration risk, curator/allocator risk
 - `references/dex-amm.md` — spot-price manipulation, flash loan pool-ratio distortion, downstream oracle-integration misreads
 - `references/bridge.md` — verifier/validator independence, failover behavior, key custody architecture, signing-interface spoofing
