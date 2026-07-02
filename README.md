@@ -65,7 +65,109 @@ Each reference file only loads when its category applies — checking a stableco
 
 ## Using it
 
-This is built as a [Claude Code](https://docs.claude.com) skill. Clone the repo, point Claude Code at the folder, and ask it to check a protocol. It will tell you what it found, how confident it is, and what it couldn't verify — followed by a plain-language breakdown for anyone without a security background.
+This is built as a [Claude Code](https://docs.claude.com) skill. There are three ways to set it up depending on how you work.
+
+### Setup
+
+**Option A — Work inside the repo (simplest)**
+
+```bash
+git clone https://github.com/DeFiJerusalem/DFJ-Pattern-checker
+cd DFJ-Pattern-checker
+claude  # opens Claude Code in this directory; the skill loads automatically
+```
+
+**Option B — Add to your own project**
+
+Copy `SKILL.md` and the `references/` folder into your project's `.claude/` directory:
+
+```
+your-project/
+  .claude/
+    SKILL.md
+    references/
+      lending.md
+      bridge.md
+      ...
+```
+
+Claude Code will pick up the skill automatically when you open your project.
+
+**Option C — Install globally**
+
+Copy `SKILL.md` and `references/` into `~/.claude/` so the skill is available in every Claude Code session regardless of directory.
+
+---
+
+### Invoking the skill
+
+Once set up, invoke it with the slash command:
+
+```
+/dfj-pattern-checker [protocol name or description]
+```
+
+Or just ask naturally — Claude Code will recognise when a request matches this skill:
+
+> "Check Aave for known exploit patterns"
+> "Is this protocol exposed to flash loan price manipulation?"
+> "Run a DeFiJerusalem pattern scan on the contracts I'm about to integrate"
+
+---
+
+### What to provide
+
+The skill works best when given real inputs. Provide whichever of these you have — you don't need all of them:
+
+| Input | How to provide | What it unlocks |
+|---|---|---|
+| **Contract source code** | Paste inline, share a file, or give an Etherscan/Solscan/explorer link | Deterministic checks: TWAP vs. spot price, multisig threshold, mint cap presence |
+| **Audit report** | Paste PDF text or a link | Scope confirmation, known-issue checks, oracle and key custody findings |
+| **Protocol docs** | Link or paste | Oracle setup, collateral types, admin structure |
+| **Just the protocol name** | Name alone | Web research is used; more findings will be CANNOT DETERMINE due to relying on public sources only |
+
+If nothing is available, the skill will say so rather than guess. CANNOT DETERMINE is an honest output, not a negative finding.
+
+---
+
+### Pre-deployment / pre-integration checklist
+
+Before deploying a new protocol or integrating an external one as collateral, an oracle source, or a yield strategy, run the following:
+
+**1. Identify the category**
+Is it a lending market, DEX/AMM, bridge, derivatives platform, stablecoin, yield aggregator, RWA protocol, or insurance fund? If it spans multiple categories, each gets its own check.
+
+**2. Share the contract code or a verified on-chain address**
+```
+/dfj-pattern-checker
+Here's the contract: [paste source or Etherscan link]
+Category: Lending
+```
+
+**3. Share any available audit reports**
+Audit reports often contain the oracle setup, admin key structure, and known-issue disclosures that are hardest to verify from contract code alone.
+
+**4. For any protocol you're building on top of, check the underlying too**
+A yield aggregator built on a lending market with a concentrated-collateral problem inherits that problem. The skill checks inherited risk automatically, but it needs to know what the underlying protocol is.
+
+**5. Pay specific attention to these outputs before deploying:**
+- Any **EXACT MATCH** — stop and investigate before proceeding
+- **SIMILAR MATCH on Concentrated Control Risk** — means a small number of parties can take a severe action over the protocol; relevant for any integration where you're putting user funds into it
+- **CANNOT DETERMINE on oracle setup** — means you haven't confirmed how pricing works; verify manually before using the protocol's price as an input to your own contracts
+- **Per-chain consistency: CANNOT DETERMINE** — if you're deploying on a chain other than the protocol's primary chain, the security configuration may differ; verify the specific deployment
+
+---
+
+### What you get back
+
+Every check ends with two outputs:
+
+**Technical findings** — one entry per pattern, structured as:
+> Pattern name → EXACT MATCH / SIMILAR MATCH / NOT PRESENT / CANNOT DETERMINE → specific evidence (the line, function, or document that triggered the finding) → confidence note
+
+**Plain-language Breakdown** — same findings rewritten for someone with no DeFi or security background. One entry per pattern, each one explaining the underlying concept before stating what was found. Suitable for sharing with non-technical stakeholders.
+
+Both outputs end with an explicit scope reminder: this is a pattern check, not an audit, and NOT PRESENT does not mean safe.
 
 ## Confidence levels, explained plainly
 
