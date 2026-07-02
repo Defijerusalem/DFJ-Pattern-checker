@@ -17,6 +17,75 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 ## Workflow
 
+0. **Determine whether this is a pre-deployment design check or a post-deployment protocol check.**
+
+   This skill can operate at two points in a protocol's lifecycle:
+
+   **Pre-deployment (design review):** The user submits a completed `PRE_DEPLOYMENT_TEMPLATE.md` or equivalent design spec document describing a protocol that has not yet been deployed. No live contracts exist to check. The input is the design decisions themselves — oracle choice, mint authority structure, bridge verifier configuration, admin key setup — described in plain language or a structured document.
+
+   **Post-deployment (live protocol):** The user names a live protocol and provides or requests contract code, audit reports, and documentation. This is the standard workflow described in steps 1–12 below.
+
+   **How to tell which mode you are in:**
+   - If the user submits a completed `PRE_DEPLOYMENT_TEMPLATE.md` or equivalent filled document — run the pre-deployment check directly against it (workflow below).
+   - If the user describes a protocol they are building in plain language without a filled template — enter **conversational intake mode** (see below).
+   - If the user names an existing protocol or provides a contract address — this is a post-deployment check, proceed to Step 1.
+   - If unclear, ask: "Is this protocol already deployed, or are you checking a design before building?"
+
+   ---
+
+   **Conversational Intake Mode**
+
+   When a user says they are building a protocol but has not filled in the template, do not ask them to fill it in manually. Instead, conduct a structured interview and generate the spec from their answers.
+
+   **How it works:**
+
+   a. **Open with one question:** "What are you building?" — get the protocol type and a brief description. Do not ask multiple questions at once.
+
+   b. **Identify the category from their answer.** Load the relevant reference file(s) silently. Then ask only the questions that map to patterns in those files — do not ask questions about categories that do not apply.
+
+   c. **Ask one question at a time.** Move through the relevant sections of the template in order. Do not front-load all questions. Wait for each answer before asking the next one.
+
+   d. **Accept plain language answers.** The user does not need to know DeFi security terminology. If they say "a backend service holds the key that mints tokens," that is enough to check against Stablecoin Pattern 1. Translate their language into pattern criteria internally — do not make them do it.
+
+   e. **Flag undecided answers immediately.** If the user says "we haven't decided that yet" or "I'm not sure," flag it immediately as a CANNOT DETERMINE finding and note it must be resolved before deployment. Do not wait until the end to surface it.
+
+   f. **When enough information has been gathered** — either all relevant pattern questions have been answered, or the user indicates the design is complete — generate the spec automatically:
+      - Write out the filled `PRE_DEPLOYMENT_TEMPLATE.md` from the conversation
+      - Save it as a file the user can keep
+      - Immediately run the pre-deployment check against it without asking the user to do anything else
+
+   g. **Output the findings** following the pre-deployment workflow below. The user never sees the template as a form to fill in — they just have a conversation and get findings.
+
+   ---
+
+   **Example intake conversation:**
+
+   User: "I'm building a stablecoin backed by ETH and US Treasuries."
+   Checker: "Who or what authorises new tokens to be minted — is it an on-chain smart contract with enforced rules, a multisig, or a single key?"
+   User: "A backend service. The key is stored in AWS."
+   Checker: [internally: Stablecoin Pattern 1 — EXACT MATCH candidate]
+   Checker: "Is there an on-chain cap on how much can be minted per transaction or per day?"
+   User: "Not yet."
+   Checker: [flags: CANNOT DETERMINE — no on-chain cap defined]
+   Checker: "Who manages the US Treasury exposure off-chain, and how is the backing verified on-chain?"
+   ...and so on until findings are complete.
+
+   ---
+
+   **Pre-deployment check workflow:**
+
+   a. **Confirm operating status is N/A.** The protocol does not exist yet — skip Step 1's operating status check entirely.
+
+   b. **Identify the category from the template's Section 1.** Proceed to load the relevant reference file(s) exactly as in Step 3 below.
+
+   c. **Check each pattern against the design decisions, not live contract data.** The underlying question for every pattern is the same — only the evidence source changes. Instead of reading a contract's multisig threshold on-chain, you read the threshold stated in the design document. Instead of checking a live oracle configuration, you check the oracle design described in the spec.
+
+   d. **Treat blank or unanswered fields as CANNOT DETERMINE, not as NOT PRESENT.** A blank answer means the design decision has not been made yet — this is the most important finding a pre-deployment check can surface. Flag every blank field in a relevant section explicitly: "This decision has not been documented. It must be made and reviewed before deployment."
+
+   e. **Output pre-deployment findings, not a score.** The output is a list of design decisions that match known failure patterns, decisions that are undocumented (CANNOT DETERMINE), and decisions that are clean (NOT PRESENT). Do not produce a numeric score — the protocol is not live and the full methodology cannot be applied. State clearly: "These are pre-deployment findings against known structural failure patterns. They reflect design decisions, not deployed code. A clean result here does not mean the implementation will be safe."
+
+   f. **Close with a prioritised fix list.** For every EXACT MATCH or CANNOT DETERMINE finding, state: what the finding is, what the known failure looks like (cite the real incident from the reference file), and what a clean design decision looks like instead. Order findings by severity — EXACT MATCH first, then CANNOT DETERMINE, then SIMILAR MATCH.
+
 1. **Check whether the protocol is still operating before running a full pattern scan.** A meaningful share of protocols that would otherwise be flagged by this library turn out to be shut down, in formal wind-down, operating at a small fraction of historical scale, or actively frozen/in incident response by the time they're checked — this has happened often enough in testing that it must be checked first, not discovered partway through. State whichever of these applies plainly as the first thing in the output, before any pattern findings:
    - **Shut down:** e.g., "This protocol shut down in [month/year]."
    - **Formal wind-down:** e.g., "This protocol is in formal wind-down, with current TVL of $X compared to a peak of $Y."
@@ -95,6 +164,7 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 ## Reference files
 
+- `PRE_DEPLOYMENT_TEMPLATE.md` — structured design review template for protocols not yet deployed. Submit this filled-in document to trigger a pre-deployment check (Step 0 above) instead of a live protocol check.
 - `references/lending.md` — collateral concentration, cross-chain backing dependency, exotic token integration risk, curator/allocator risk
 - `references/dex-amm.md` — spot-price manipulation, flash loan pool-ratio distortion, downstream oracle-integration misreads
 - `references/bridge.md` — verifier/validator independence, failover behavior, key custody architecture, signing-interface spoofing
