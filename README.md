@@ -49,7 +49,8 @@ Every pattern here ties back to a real, named incident — not a hypothetical. A
 ## How it's structured
 
 ```
-SKILL.md              ← entry point: workflow, cross-cutting checks, known limitations
+SKILL.md                      ← entry point: workflow, cross-cutting checks, known limitations
+PRE_DEPLOYMENT_TEMPLATE.md    ← design review template for protocols not yet deployed
 references/
   lending.md
   dex-amm.md
@@ -171,7 +172,7 @@ Both outputs end with an explicit scope reminder: this is a pattern check, not a
 
 ## Pre-deployment design review
 
-`PRE_DEPLOYMENT_TEMPLATE.md` is a companion tool for teams building a new protocol, not just for checking existing ones. Fill it in **before writing code** — before your first design review — and run it through the checker to surface structural decisions that have already cost the industry money, before you make them.
+`PRE_DEPLOYMENT_TEMPLATE.md` is a companion tool for teams building a new protocol, not just for checking existing ones. Use it **before writing code** — before your first design review — to surface structural decisions that have already cost the industry money, before you make them.
 
 ### When to use it
 
@@ -180,14 +181,29 @@ Both outputs end with an explicit scope reminder: this is a pattern check, not a
 - When evaluating a third-party protocol to integrate as collateral, an oracle source, or a yield strategy
 - When adding a new chain deployment to an existing protocol
 
-### How to fill it in
+### Two ways to run a pre-deployment check
+
+**Option 1 — Conversational intake (no template to fill)**
+
+Just describe what you're building. The checker will interview you and generate the spec from your answers:
+
+```
+/dfj-pattern-checker
+I'm building a stablecoin backed by ETH and US Treasuries.
+```
+
+The checker asks one question at a time, covering only the patterns relevant to your category. When it has enough information, it writes the spec for you and runs the check automatically. You never see a form — you just have a conversation and get findings.
+
+Undecided answers ("we haven't figured that out yet") are flagged immediately as CANNOT DETERMINE — a list of decisions you need to make before deployment, surfaced in the conversation rather than discovered after launch.
+
+**Option 2 — Fill the template directly**
 
 1. **Start with Section 1** — pick your category and list your target chains
 2. **Fill in only your relevant category sections** — each section says "Skip if not applicable"
 3. **Always complete Sections 8–11** — Governance/Admin, Supply Chain, Audit Scope, and Multi-Chain Consistency apply to every protocol type
 4. **Leave genuinely unknown answers blank** — don't guess to fill space. A blank is a CANNOT DETERMINE finding, which is honest and actionable. A wrong answer is worse than no answer
 
-### How to run it through the checker
+Then run:
 
 ```
 /dfj-pattern-checker @PRE_DEPLOYMENT_TEMPLATE.md
