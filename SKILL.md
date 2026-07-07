@@ -17,6 +17,24 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 ## Workflow
 
+-1. **At the start of a new session in this repo, check whether at least 7 days have passed since the date in `LAST_CHECKED.md`. If not, skip this step entirely and proceed straight to whatever the user asked for — do not mention the check at all.** If 7 or more days have passed, do one bounded check for recent hacks not yet in the reference files. This runs at most once per week, regardless of how many sessions happen in that window — not once per session, and never mid-session.
+
+   **Success criterion for this step (define before starting, per this project's own standard):** either (a) confirm no genuinely new incident exists since the last recorded check, or (b) surface a short list of specific, named, dated candidates for the user to review — never silently add anything to a reference file as part of this step.
+
+   a. Read `LAST_CHECKED.md` to find the date of the last check.
+
+   b. Run a single, bounded web search for major DeFi hacks/exploits between that date and today. Do not expand into the exhaustive multi-query research mode used for a deliberate "let's find more" research session — this is a quick scan, not a full pass. One or two search queries is normal; more than four means this has become a full research task and should be treated as one explicitly, with the user's awareness, not run silently at session start.
+
+   c. For each candidate found, check it against every existing reference file (`grep`-equivalent check) before treating it as new. Most candidates will already be covered — do not re-verify what's already documented.
+
+   d. For anything genuinely new: do NOT add it to any reference file automatically. Instead, append a short, dated entry to `session-check-log.md` describing the candidate, its apparent mechanism, and which existing pattern (if any) it might relate to — flagged clearly as unreviewed.
+
+   e. Update `LAST_CHECKED.md` with today's date.
+
+   f. Tell the user, briefly, at the start of the session: either "No new incidents found since [date]" or "N candidate incidents found since [date], logged in session-check-log.md for review" — then proceed to whatever the user actually asked for. Do not block on this or turn it into the main task unless the user wants to act on it.
+
+   **What this step is not:** it is not a substitute for a deliberate, deep research pass (the kind used when a user explicitly says "let's find more" or shares a specific document to analyze). Those remain manual, human-directed sessions with the full rigor described throughout this document — mechanism verification, two-incident bar, precise pattern placement. This step is a lightweight, bounded freshness check only.
+
 0. **Determine whether this is a pre-deployment design check or a post-deployment protocol check.**
 
    This skill can operate at two points in a protocol's lifecycle:
@@ -26,9 +44,51 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
    **Post-deployment (live protocol):** The user names a live protocol and provides or requests contract code, audit reports, and documentation. This is the standard workflow described in steps 1–12 below.
 
    **How to tell which mode you are in:**
-   - If the user submits a document, template, or description of a protocol they are *building*, this is a pre-deployment check.
-   - If the user names an existing protocol or provides a contract address, this is a post-deployment check.
+   - If the user submits a completed `PRE_DEPLOYMENT_TEMPLATE.md` or equivalent filled document — run the pre-deployment check directly against it (workflow below).
+   - If the user describes a protocol they are building in plain language without a filled template — enter **conversational intake mode** (see below).
+   - If the user names an existing protocol or provides a contract address — this is a post-deployment check, proceed to Step 1.
    - If unclear, ask: "Is this protocol already deployed, or are you checking a design before building?"
+
+   ---
+
+   **Conversational Intake Mode**
+
+   When a user says they are building a protocol but has not filled in the template, do not ask them to fill it in manually. Instead, conduct a structured interview and generate the spec from their answers.
+
+   **How it works:**
+
+   a. **Open with one question:** "What are you building?" — get the protocol type and a brief description. Do not ask multiple questions at once.
+
+   b. **Identify the category from their answer.** Load the relevant reference file(s) silently. Then ask only the questions that map to patterns in those files — do not ask questions about categories that do not apply.
+
+   c. **Ask one question at a time.** Move through the relevant sections of the template in order. Do not front-load all questions. Wait for each answer before asking the next one.
+
+   d. **Accept plain language answers.** The user does not need to know DeFi security terminology. If they say "a backend service holds the key that mints tokens," that is enough to check against Stablecoin Pattern 1. Translate their language into pattern criteria internally — do not make them do it.
+
+   e. **Flag undecided answers immediately.** If the user says "we haven't decided that yet" or "I'm not sure," flag it immediately as a CANNOT DETERMINE finding and note it must be resolved before deployment. Do not wait until the end to surface it.
+
+   f. **When enough information has been gathered** — either all relevant pattern questions have been answered, or the user indicates the design is complete — generate the spec automatically:
+      - Write out the filled `PRE_DEPLOYMENT_TEMPLATE.md` from the conversation
+      - Save it as a file the user can keep
+      - Immediately run the pre-deployment check against it without asking the user to do anything else
+
+   g. **Output the findings** following the pre-deployment workflow below. The user never sees the template as a form to fill in — they just have a conversation and get findings.
+
+   ---
+
+   **Example intake conversation:**
+
+   User: "I'm building a stablecoin backed by ETH and US Treasuries."
+   Checker: "Who or what authorises new tokens to be minted — is it an on-chain smart contract with enforced rules, a multisig, or a single key?"
+   User: "A backend service. The key is stored in AWS."
+   Checker: [internally: Stablecoin Pattern 1 — EXACT MATCH candidate]
+   Checker: "Is there an on-chain cap on how much can be minted per transaction or per day?"
+   User: "Not yet."
+   Checker: [flags: CANNOT DETERMINE — no on-chain cap defined]
+   Checker: "Who manages the US Treasury exposure off-chain, and how is the backing verified on-chain?"
+   ...and so on until findings are complete.
+
+   ---
 
    **Pre-deployment check workflow:**
 
@@ -60,6 +120,14 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 5. **Check for Concentrated Control Risk, regardless of category.** This is a cross-cutting check, not specific to any one reference file — apply it alongside whichever category-specific pattern(s) are in use. The underlying question is always the same: how many genuinely independent parties have to collude to take a severe, unilateral action over user funds or the system itself? This question has shown up validated at multiple different layers: a lending protocol's governance vote (Solend's SLND1 proposal to seize a whale's account, passed with 97.5% approval even though one wallet cast 88% of the votes, before being reversed the next day after backlash), a bridge or stablecoin's admin multisig (Frax's 3-of-5 core team multisig controlling the Comptroller and Timelock, which pushed an undisclosed contract patch in December 2025), and a base-layer validator/consensus set (a custom L1 where core contributors hold a large, concentrated share of the staked token that determines block production and consensus weight). These are the same risk at different layers — governance, admin role, and consensus — not three separate patterns.
 
+   **The extreme, clarifying case: a public claim of decentralization directly contradicted by the actual control structure.** TesseraDAO (June 1, 2026, ~$2.49M) published its own manifesto explicitly asking, of other protocols, whether admin rights were permanently revoked and whether governance used real multi-sig — then answered those exact questions about itself with claims that were false. Admin rights were never revoked. No multisig existed. A single private key held total authority: minting, role assignment, ownership transfer, trading, and withdrawal, with no delay and no second signature required between any command and its execution. The holder of that one key reassigned critical roles to themselves, minted 99 million tokens from the zero address, sold them through the protocol's own swap function for roughly $2.49M, and withdrew cleanly — collapsing the token's price by 99% in minutes. This is not a new mechanism; it is Concentrated Control Risk's EXACT MATCH criteria in its most extreme, cleanest form — one party, zero independent friction, real funds moved. The additional lesson worth carrying forward: a protocol's own public claims about its control structure (audits, multisig, revoked permissions) are themselves evidence to check against reality, not a substitute for checking. **How to check, in addition to the standard question above:** where a protocol publishes specific claims about its own admin structure (audit completion status, multisig configuration, permission revocation), verify each claim independently — an audit firm's own public project page, an on-chain read of current role holders, and the actual contract's owner/admin function are all real, checkable sources that can confirm or contradict a protocol's self-reported governance claims.
+
+   **A distinct, real confirming case specifically about upgradeable-proxy authority: the same concentration risk applies to who can upgrade a contract's underlying logic, not just who can call its existing functions.** Wasabi Protocol (April 30, 2026, $5M+, across Ethereum, Base, Berachain, and Blast simultaneously) held every upgradeable perpetuals vault under a single deployer EOA (`wasabideployer.eth`) with `ADMIN_ROLE` — no multisig, no timelock, no DAO governance of any kind. A compromised key was used to call `grantRole()`, handing that same total authority to an attacker-controlled helper contract, which then UUPS-upgraded the vault contracts to a malicious implementation and drained balances across all four chains in the same block. As Rekt.news put it plainly: "Wasabi wasn't exploited. It was administered, by someone who had no right to be holding the keys." No code vulnerability was found or needed — the attacker simply used the key exactly as it was designed to be used. Worth checking as a distinct sub-question from role-based admin functions generally: for any upgradeable (proxy-pattern) contract, who specifically holds the authority to execute an upgrade, and is that authority protected by the same multisig/timelock scrutiny as other privileged functions, or treated as a separate, less-guarded deployment convenience? Multiple independent security firms (Blockaid, CertiK, Hypernative, Cyvers) also noted the attacker's contract bytecode matched patterns from prior activity specifically targeting Wasabi — a real, additional signal that this was a targeted, reconnaissance-preceded operation rather than an opportunistic scan.
+
+   **A genuinely distinct, single-incident risk specific to reactive/emergency upgrades: an upgrade rushed out under time pressure can itself reopen an already-closed attack surface, independent of who is authorized to trigger it.** Pike Finance (April 2024, two causally-linked incidents) illustrates this precisely. The first exploit ($299K, April 26) was a forged Cross-Chain Transfer Protocol message accepted without adequate validation — itself a real instance of the cross-chain trust question this file's Pattern 6 above addresses, just at the application layer rather than a native bridge. In direct response, Pike rushed out an emergency upgrade to pause the protocol. That upgrade added a new dependency to the contract, which shifted the proxy's storage layout enough that the existing `initialized` boolean variable was no longer read from its original storage slot — causing the contract to behave as though it had never been initialized at all. The attacker exploited this reopened initialization window to re-initialize the contract with themselves as admin, then drained a further $1.6-1.9M four days later. This is not a key-custody or authorization question (Wasabi's case, above) — it is a real, structural risk in the upgrade mechanism itself: a change made hastily, under pressure, in response to an active incident, can introduce a second vulnerability distinct from and more severe than the first. **How to check:** for any upgradeable proxy contract, verify whether emergency/incident-response upgrade procedures include a storage-layout compatibility check before deployment, not just before routine, planned upgrades — the risk is highest precisely when this check is most likely to be skipped for speed.
+
+   **A distinct variant worth checking separately: flash-loan-acquired concentration, not just structurally-existing concentration.** Solend's SLND1 case involved a wallet that already held a large token position before voting. A different, real mechanism is acquiring governance concentration instantaneously, within a single transaction, specifically to exploit a lack of any minimum holding period before newly-acquired tokens count as voting power. Real case: Beanstalk Farms (April 17, 2022, ~$182M) — an attacker used a flash loan to acquire roughly 79% of BEAN governance voting power in one transaction, immediately proposed and passed two governance proposals (exploiting an emergency governance path that allowed same-block execution with only a 2/3 vote, rather than the standard proposal process with its normal waiting period), and transferred protocol funds to their own address before the flash loan was repaid in the same transaction. **How to check:** does the governance system require tokens to be held for a minimum duration before they count toward voting power on a live proposal, or can newly-acquired tokens (including flash-loaned ones) vote immediately? Separately, does any "emergency" or expedited governance path exist with a lower quorum or shorter timelock than the standard process, and if so, is that path itself protected against the same instantaneous-acquisition mechanism?
+
    **How to check:** identify any mechanism (a governance vote, an admin multisig, a validator/staking weight system) that could let a concentrated set of parties take a severe, unilateral action — seizing funds, pushing an unreviewed upgrade, or controlling consensus outcomes. Check how concentrated the actual power behind that mechanism is (disclosed voting/stake/key distribution, or its absence), and whether any friction exists (cooldown, supermajority requirement, independent veto) that would slow down or block a concentrated actor from acting unilaterally.
 
    **Match criteria:**
@@ -68,6 +136,12 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
    - NOT PRESENT: no mechanism for unilateral severe action exists, or power is verifiably distributed with no small group able to act alone.
 
    Present this check as its own labeled finding distinct from whatever category-specific patterns were also checked, since it cuts across categories rather than belonging to one.
+
+5b. **Check for unchecked staticcall success in any ERC-1271 (or equivalent contract-based signature verification) path — cross-cutting, single-incident watch item, not yet two-case validated.** The underlying question: does the signature-verification logic check both the `success` boolean returned by a low-level `staticcall` and the returned magic-value bytes, or only the returned bytes? Solidity's low-level call mechanics return revert data as ordinary return data — a `staticcall` that reverts with data happening to start with the ERC-1271 magic value (`0x1626ba7e`) is indistinguishable from a genuinely valid signature if the success flag is never checked. Real case: Gnosis Pay (June 1, 2026, ~$265K–$1.5M depending on source), where the Zodiac Delay Module's `_isValidContractSignature()` checked only the first four bytes of `returnData` against the magic value, never the `success` flag. An attacker deployed a contract that always reverted with data beginning with the magic value, routed the verification call through it, and had 41 malicious transactions accepted as validly signed. A separate, real, important detail: the exact same bug had already been found and silently fixed months earlier in a newer code line (`zodiac-core`, February 2026) — but production Gnosis Pay contracts were still compiled against the older, vulnerable `@gnosis.pm/zodiac` dependency, meaning the fix existed and simply never reached the systems that needed it. This is a real, additional lesson distinct from the signature bug itself: a fix existing somewhere in an organization's own codebase does not mean it has propagated to every dependent deployment. This mechanism is genuinely cross-cutting — ERC-1271-style signature verification appears in bridges (relayer/multisig signing), lending (governance and admin actions), insurance (claims voting), and derivatives (order signing) — but currently rests on this single incident. A related audit finding (Centrifuge, Code4rena, 2023) identified the same class of gap but was caught before deployment, not exploited, so it does not count as a second validating incident under this methodology's two-case rule. Treat any finding here as a flagged, real risk worth checking, not a scored EXACT MATCH, until a second real, exploited case is found. **How to check:** for any signature-verification code path that performs a low-level `call` or `staticcall` to check an ERC-1271-style magic value, confirm the code explicitly checks the boolean success return value in addition to the returned data — both must be validated, not just the data. Also check, separately, whether the contract in question is built against a pinned, current version of any shared/reusable security-module dependency (like Zodiac), or an older version that may not include fixes already made upstream.
+
+5c. **Check whether a multisig or admin wallet contract permits an arbitrary or insufficiently restricted `delegatecall` — cross-cutting, single-incident watch item, not yet two-case validated.** The underlying question: can a function reachable by an ordinary transaction cause the wallet/admin contract to `delegatecall` into an untrusted, attacker-supplied address? A `delegatecall` executes the target's code using the *caller's* own storage and privilege context — meaning a successful malicious delegatecall can rewrite the calling contract's own ownership, admin roles, or approvals as if the legitimate contract had done it itself. Real case: UXLINK (September 22, 2025, ~$11.3M direct loss, ~$30-70M in broader market cap impact), where a `delegatecall` vulnerability in the project's multisig wallet contract let an attacker execute arbitrary code with the multisig's own execution context, call `addOwnerWithThreshold()` to install themselves as an owner, then use that hijacked authority to remove legitimate owners and mint between 1 and 2 billion (some estimates cite up to 10 trillion) tokens with no supply cap enforced in the contract. This is distinct from a stolen signer key (Bridge Pattern 3) or a compromised admin EOA calling a legitimate, correctly-scoped function (as in GriffinAI, `bridge.md`) — here, the wallet contract's own code permitted a delegatecall path that should never have been reachable by an ordinary caller. **How to check:** identify whether any multisig, admin wallet, or proxy contract exposes a function that performs a `delegatecall` to an address influenced by transaction input, and if so, confirm that target is restricted to a fixed, trusted implementation address rather than being arbitrary or attacker-influenced. Separately, check whether the token or protocol enforces a hard-coded, immutable supply cap at the contract level — UXLINK's mint function had no such cap, which is what turned a wallet-takeover into an unlimited-inflation event rather than a bounded one.
+
+5d. **Check whether there is verifiable confirmation that the audited code matches the deployed bytecode, with no modifications made after the audit's completion — cross-cutting, single-incident watch item, not yet two-case validated.** The underlying question: an audit report only covers the specific code version it reviewed. If a contract is modified after that audit — even a change the team considers minor or unrelated to the audited logic — the audit no longer verifies what is actually live. Real case: GemPad (December 17, 2024, ~$1.9-2.2M across Ethereum, Base, and BNB Chain), a multi-chain launchpad providing pre-audited smart contract templates to other projects. A reentrancy vulnerability in the `collectFees` function of its `GempadLock` contract was exploited using a malicious token with a custom transfer function that re-entered the locking contract before balance checks completed, repeatedly draining more value than was ever deposited. The contract had been audited by two separate, reputable firms (SolidProof and Cyberscope) — but SolidProof publicly stated the contract had been modified after their audit was completed at the request of a different auditor, a claim GemPad disputed. Whichever account is accurate, the incident demonstrates the real, structural gap this check is built around: an audit's value is entirely contingent on the deployed code matching what was actually reviewed, and that correspondence is not always independently verifiable after the fact. Because GemPad's templates were used by 27 different projects, a single contested modification created a shared attack surface across all of them simultaneously — the equivalent of a supply-chain risk, but for smart contract templates rather than a frontend dependency. **How to check:** where a protocol cites a specific audit as evidence of security, check whether the audit report includes a hash or commit reference tying it to an exact code version, and whether any subsequent changes to that code have been independently re-reviewed or are otherwise verifiably absent.
 
 6. **Check per-chain deployment consistency for any protocol live on more than one blockchain.** This is a separate cross-cutting check from Concentrated Control Risk above. Many protocols (Frax, Pendle, Stargate, and most major lending/stablecoin/bridge protocols) deploy the same product across multiple chains — but security configuration is not guaranteed to be identical across those deployments. A bridge verifier set, an admin multisig's signer composition, or an oracle setup can differ chain by chain, even under one brand name. Do not treat a finding verified on one chain (e.g., "Frax's DVN setup") as automatically true for every chain the protocol is deployed on.
 
@@ -94,7 +168,27 @@ This skill checks protocol code/docs/audits against a fixed library of patterns,
 
 10. **Present results category by category**, using the structure: pattern name → match status → evidence found (quote/cite the specific line, function, or audit statement that supports the determination) → confidence level. Never present a finding without pointing to what specifically triggered it.
 
-11. **End with an explicit reminder** that this check covers known patterns only, is not a substitute for a professional audit, and that "NOT PRESENT" results across all patterns do not mean the protocol is safe — only that it wasn't flagged by this specific, limited check.
+11. **End every scan output with the following two sections, in this order, every time without exception:**
+
+   **What These Results Mean**
+
+   Include this explanation verbatim or close to it at the end of every scan:
+
+   > An EXACT MATCH means the specific mechanism behind a validated real-world exploit is present in this protocol's design or configuration. It does not mean the protocol will be exploited. It means the structural condition that enabled a past loss exists here — and that condition has caused real, dollar-quantified damage at least twice before at other protocols.
+   >
+   > Not every EXACT MATCH can be exploited under current conditions. Economic incentives, attacker sophistication, and mitigating factors not visible from public data all affect whether a mechanism becomes an active vulnerability. What this checker confirms is the structure — not the outcome.
+   >
+   > SIMILAR MATCH means the mechanism is present in a related or partial form. NOT PRESENT means the mechanism was not found based on available public data. CANNOT DETERMINE means there was not enough public information to make a finding — this is not the same as safe.
+   >
+   > This check covers known structural patterns only. It is not a substitute for a professional audit. A clean result here means these specific, named patterns were not flagged — not that the protocol is safe.
+
+   **Mandatory Scope Reminder**
+
+   Close with this line after the explanation above:
+
+   > The DFJ-Pattern-checker checks for structural failure patterns validated by real past incidents. It does not find novel code bugs, predict future exploits, or assess economic attack vectors. Six professional audit firms missed the Euler Finance vulnerability before it cost $197M — this tool would not have caught that either. Use it as one layer of due diligence, not the only one.
+
+
 
 12. **Always close with a "Breakdown," separate from the detailed findings — written for someone with no DeFi or security background, not just a shorter version of the analyst output.** This is not a summary that compresses jargon; it's a teaching explanation that assumes the reader doesn't know what a multisig, an oracle, or a bridge verifier is, but is curious about something they're actually using or considering using. Structure this as a breakdown — one entry per finding, not a single flowing narrative — so each result is still individually identifiable, the same way the technical findings are, just written in plain language. Rules for the Breakdown:
 
