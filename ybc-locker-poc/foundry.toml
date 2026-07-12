@@ -1,0 +1,11 @@
+[profile.default]
+src = 'test'
+out = 'out'
+libs = ['lib']
+test = 'test'
+solc = "0.8.20"
+ffi = true
+
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+]
