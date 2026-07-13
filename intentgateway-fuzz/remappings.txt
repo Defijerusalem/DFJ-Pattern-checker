@@ -1,0 +1,5 @@
+@hyperbridge/core/=src/hyperbridge/core/
+@polytope-labs/solidity-merkle-trees/=src/solidity-merkle-trees/
+@openzeppelin/=lib/openzeppelin-contracts/
+forge-std/=lib/forge-std/src/
+uniswap/=src/uniswap/
