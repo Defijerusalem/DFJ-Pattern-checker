@@ -1,0 +1,17 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+test = 'test'
+solc = "0.8.22"
+evm_version = "cancun"
+
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/=lib/openzeppelin-contracts/",
+]
+
+[invariant]
+runs = 1000
+depth = 300
+fail_on_revert = false
