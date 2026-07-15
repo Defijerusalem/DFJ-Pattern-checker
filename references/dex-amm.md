@@ -76,6 +76,30 @@ Also check for asset-specific oracle gaps: some manipulation-resistant oracles d
 - SIMILAR MATCH: an unrestricted call-target pattern exists but the protocol's approval model is limited/per-transaction by default (reducing blast radius), or a partial whitelist exists that has not been independently verified as complete.
 - NOT PRESENT: all low-level calls in the swap/position-management path are validated against an explicit, confirmed whitelist of legitimate targets and function selectors, or the protocol does not perform any user-directed low-level calls at all.
 
+## Pattern 4: Fee-on-Transfer/Deflationary Token Hook Directly Corrupts Its Own AMM Pair Reserves
+
+**What to check:** whether a token's own custom `_transfer`/`_update` override directly burns tokens out of, or mints tokens into, its own AMM pair's balance — or otherwise mutates the pair's token balance — outside of a genuine swap, and whether the resulting desync between the pair's tracked `reserve0`/`reserve1` and its actual token balance is then realizable by anyone calling `sync()`/`skim()` (both permissionless on a stock Uniswap-V2-style pair).
+
+**Why this matters — real cases:** this is the single most repeated smart-contract exploit mechanism observed in a large-scale reconciliation pass across on-chain incident data (60-80+ independent instances follow this identical shape, overwhelmingly BSC/PancakeSwap "tax token" launches, individually modest in size but collectively the dominant failure mode by volume). A representative, dollar-quantified sample:
+- SafeMoon V1 (~$8.9M, the entire WBNB side of its SafeSwap pair) — the implementation exposed `burn(address from, uint256 amount)` as a fully public function with no access control, letting anyone burn the pair's own token balance directly, collapsing the constant-product ratio before draining the other side.
+- FPC Token (~$4.7M) — the sell-path `burnLpToken()` routine drained the pool's own FPC reserve directly rather than routing the sale through the pool.
+- Caterpillar Coin/CUT (~$1.26M) — a bespoke "LP-removal value preservation" mechanic minted free tokens whenever liquidity was removed, rather than actually preserving value.
+- Planet Finance (~$400K) — a zero-amount transfer branch triggered an uncompensated pool-side burn, meaning the exploit required no real capital to trigger, only a correctly-shaped zero-value call.
+- P719 Token (~$312K) and NORMIE (~$490K) — both combine an uncompensated in-transfer burn with a `skim()` call that instantly realizes the artificially-collapsed reserve as extractable value for whoever calls it.
+
+**The underlying reason this recurs so often:** a standard Uniswap-V2-style pair's `sync()` (recalibrate `reserve0`/`reserve1` to match actual balances) and `skim()` (send any balance in excess of tracked reserves to a caller-chosen address) are both intentionally permissionless by design — safe for a well-behaved token, but a direct weapon against any token whose own transfer logic can be tricked into moving balance into or out of the pair address outside the swap path.
+
+**How to check:**
+- Locate the token's custom `_transfer`/`_update`/`transferFrom` override (a plain, unmodified OpenZeppelin ERC-20 cannot exhibit this pattern).
+- Check whether any branch of that override — a "sell tax," "deflation," "reflection," "auto-burn," "dividend," or similar mechanic — directly calls `burn`/`_burn`/a raw balance decrement against the pair's own address, or transfers/mints tokens directly to the pair, outside of the pair's own `swap()` function.
+- Check whether `sync()` and/or `skim()` on the pair are freely callable by any address (true for a stock Uniswap-V2 pair; some forks add restrictions — confirm rather than assume).
+- A closely related, smaller-scale variant worth checking in the same pass: whether the same custom `_transfer` reads the sender's and recipient's balances into local variables and writes them back independently, without special-casing `sender == recipient` — a self-transfer can then double-credit the recipient side without debiting the sender side (confirmed real, smaller-scale cases: GPU Token ~$32K, APIG ~$169K across two pools, LABUBU ~$12K, LPC Token ~$45.7K). Same root cause family (custom transfer logic that doesn't preserve the token's own conservation invariant), different trigger.
+
+**Match criteria:**
+- EXACT MATCH: the token's transfer hook directly manipulates the AMM pair's own token balance (burn-from-pair, mint-to-pair, or an uncompensated balance change touching the pair) outside the swap path, AND `sync()`/`skim()` on the pair is unrestricted.
+- SIMILAR MATCH: the transfer hook manipulates the pair's balance but `sync()`/`skim()` access is restricted, delayed, or conditioned in a way that meaningfully narrows the exploit window.
+- NOT PRESENT: the token uses an unmodified, standard transfer/swap path with no direct manipulation of any AMM pair's balance, confirmed by reading the actual `_transfer` override (or confirming none exists).
+
 ## What this file does NOT cover
 
 - MEV/sandwich attack exposure at the user-transaction level — this is a real, distinct risk category but operates on individual trades rather than protocol-level pool integrity; treat as a separate, lower-severity note rather than a pattern match here unless a specific case validates point allocation.

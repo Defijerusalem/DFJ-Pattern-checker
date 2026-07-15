@@ -53,6 +53,26 @@ A yield aggregator's vault wraps an underlying protocol (a lending market, a DEX
 - SIMILAR MATCH: internal accounting exists but edge cases (e.g., solver-based calculations) are present and not independently verified as safe.
 - NOT PRESENT: share price is calculated purely from an internally-tracked deposit ledger, immune to direct balance donation, AND (for newly-deployed vaults) a confirmed seeding/virtual-offset mechanism protects the first depositor.
 
+## Pattern 3: Reward-Debt Desync on Transferable Receipt/Share Token
+
+**What to check:** whether a staking/farming contract mints a freely-transferable receipt or share token to represent a user's staked position, while tracking that user's accrued-reward accounting (a "reward debt," checkpoint, or last-claimed index) against the holder's *address* rather than against the token itself.
+
+**Why this matters — real cases:**
+- Popsicle Finance's Sorbetto Fragola vaults (~$20.7M across 8 vaults, by far the largest confirmed case of this mechanism) — the vault's "PLP" receipt token could be transferred between addresses without triggering a sync of the MasterChef-style reward-debt accounting tied to the old holder, letting reward claims be duplicated or misdirected across the transfer boundary.
+- Equilibria's VaultEPendle (~$62.6K) — reward debt was not updated on an ERC-20 transfer of the vault's share token, letting a freshly-receiving address claim rewards that had already accrued to the position before they held it.
+- PRXVT Staking (~32.8 ETH) and Pythia Staking (~21 ETH) — both a transferable staking receipt token combined with a per-holder reward-debt checkpoint that resets or misattributes on transfer.
+- LFI/VLFI (~$36K) — a botched migration between two versions of the same mapping left reward-debt state uninitialized for transferred/migrated positions, letting them claim as if no rewards had ever been paid out.
+
+**How to check:**
+- Identify whether the staking contract mints a standard, transferable ERC-20 (or similar) token as its staking receipt, as opposed to keeping the staked position non-transferable or tracked entirely internally.
+- If transferable, check whether the token contract implements a transfer hook (`_beforeTokenTransfer`, `_update`, or equivalent) that synchronizes the reward-debt/checkpoint accounting between the old and new holder at the moment of transfer.
+- If no such hook exists, determine whether reward accounting is instead computed from a global, holder-independent index (safe) or from a per-address debt snapshot that a transfer would desync (unsafe).
+
+**Match criteria:**
+- EXACT MATCH: the staking/farming contract mints a freely-transferable receipt token AND reward accounting depends on a per-holder-address debt/checkpoint with no transfer-hook synchronization.
+- SIMILAR MATCH: a transfer hook exists but its coverage of edge cases (partial transfers, migrations between contract versions) is unverified.
+- NOT PRESENT: the receipt token is non-transferable, or reward accounting is computed from a global index applied uniformly regardless of transfer history.
+
 ## What this file does NOT cover
 
 - Solver/iterative-math implementation bugs (the specific mechanism in Yearn's yETH incident) — this is closer to a novel code-logic flaw than a recognizable pattern; treat any finding here as a flag for professional audit review, not a confident pattern match, unless a second independent case validates a specific, checkable trigger.

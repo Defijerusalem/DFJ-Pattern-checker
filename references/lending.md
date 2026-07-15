@@ -119,6 +119,46 @@ The question "how many independent parties have to collude to take a severe, uni
 - SIMILAR MATCH: a whitelist check exists but its completeness or enforcement is not independently verifiable, or the external call ordering relative to state updates is unclear from available documentation.
 - NOT PRESENT: all contract address parameters in leverage/composability functions are confirmed validated against an on-chain whitelist before use, or the function follows checks-effects-interactions ordering strictly enough that a substituted fake contract could not extract value even if accepted.
 
+## Pattern 6: Compound-Fork Empty/Near-Empty Market Exchange-Rate Donation Inflation
+
+**What to check:** whether a Compound-v2-style money market (or a fork of one) computes its share-to-underlying exchange rate as a live ratio of `(cash + totalBorrows − totalReserves) / totalSupply`, and whether that market can reach a state where `totalSupply` is zero or near-zero while still accepting direct token donations to its `cash` balance.
+
+**Why this matters — real cases:** this is the lending-specific variant of the donation-manipulable share-price mechanism already validated generally in `yield-aggregator.md` Pattern 2 (GoGoPool/Thetanuts), but it recurs so densely and specifically across Compound-v2 forks that it deserves its own explicit entry here — at least 10 independent, dollar-quantified cases follow the identical shape:
+- Sonne Finance (~$20M total across the campaign; this specific mechanism's single largest reproduced transaction ~$724K) and Hundred Finance (two separate incidents, ~$7.4M reported on the second) — both classic empty-cToken-market donation attacks on Optimism.
+- Onyx Protocol (two separate incidents, ~$3.8M and ~$2M) and 0VIX (~$2.0M) — same mechanism on different Compound forks.
+- Radiant Capital (~$4.5M) and Wise Lending (two related incidents, ~$464K and a separate ~$260K rescued by a whitehat before exploitation) — same root cause expressed through a RAY-scaled liquidity index rather than the classic `exchangeRate` formula, confirming the mechanism generalizes beyond the literal Compound v2 code shape to any share-index accounting following the same "empty pool + live donation" precondition.
+- bZx/Fulcrum (~$208K) — an early (2020) confirming case, establishing this is not a recently-discovered mechanism but a persistent, still-recurring one across new forks years later.
+
+**How to check:**
+- Identify every market/pool in the protocol and confirm whether any can realistically reach (or start at) `totalSupply == 0` or a very small `totalSupply` while still being open to deposits — a brand-new market immediately after listing is the highest-risk moment.
+- Check whether the exchange-rate/index calculation reads the token's raw `balanceOf(this)` (or an equivalent live balance) as part of `cash`, meaning a direct, non-`mint()` token transfer to the market contract changes the computed rate.
+- Check for a minimum-liquidity/seed-deposit safeguard (a "dead" initial mint, a minimum `totalSupply` floor before the market accepts further activity, or a first-depositor-only privileged seeding step) — the specific mitigation already validated as effective is minting a small amount of permanently-locked "ghost" shares at market creation, which most of the cases above lacked.
+
+**Match criteria:**
+- EXACT MATCH: a money market's exchange-rate calculation is a live function of `balanceOf(this)`/cash, AND the market can reach a near-zero `totalSupply` state while still accepting external token transfers, with no minimum-liquidity safeguard.
+- SIMILAR MATCH: a safeguard exists (minimum seed liquidity, ghost shares) but its sufficiency against a large, well-funded donation has not been independently verified.
+- NOT PRESENT: the protocol confirms every market is seeded with a permanently-locked minimum liquidity floor at creation, or the exchange-rate calculation does not depend on a raw, donatable balance.
+
+## Pattern 7: Read-Only Reentrancy on Balance-Derived LP/Vault Collateral Pricing
+
+**What to check:** whether a lending protocol prices LP-token or vault-share collateral (from Curve, Balancer, or a similar AMM) by calling a balance-derived rate function (`get_virtual_price()`, a pool's balance/rate getter) during a window where the underlying pool's own liquidity-changing function has started sending tokens out but hasn't yet finished updating its internal accounting — a "read-only" reentrancy, since the view call itself never reverts, it just returns a transiently wrong number.
+
+**Why this matters — real cases:** at least 6 independent, dollar-quantified cases share this exact mechanism:
+- dForce (~$3.65M) — Curve `remove_liquidity` reentered into dForce's own price oracle reading a wstETH/CRV gauge token mid-call.
+- Conic Finance's ETH Omnipool (~$3.25M) and Sturdy Finance (~$800K) — both priced Balancer/Curve LP collateral through a balance-based rate read during the same reentrancy window.
+- Sentiment Protocol (~$1.0M) — Balancer BPT collateral priced the same way.
+- Market.xyz/a Hundred Finance clone (~$180K) and Rari Capital's `ibETH`/Alpha Homora integration — smaller-scale confirming cases of the identical mechanism.
+
+**How to check:**
+- For any collateral type backed by an AMM LP token or a vault share, identify the specific function used to price it and confirm whether that function reads a live, balance-derived rate from the underlying pool (rather than a TWAP or an independent oracle).
+- Check whether the underlying pool's own liquidity-removal function (`remove_liquidity`, `exitPool`, or equivalent) sends tokens to the caller before finalizing its internal balance/rate accounting — this is the precondition that makes the read-only window exploitable.
+- Check whether the price-read function is protected by the *same* reentrancy lock as the pool's state-changing functions (a lock scoped only to the lending protocol's own functions does not help, since the reentrancy happens inside the AMM pool's own call stack) — Curve's newer pools expose a dedicated reentrancy-check function specifically so integrators can call it before trusting a balance-derived read; confirm whether the protocol actually uses it.
+
+**Match criteria:**
+- EXACT MATCH: collateral pricing reads a balance-derived rate from an external AMM pool with no confirmed reentrancy-safety check, AND the underlying pool's liquidity-removal function sends tokens before finalizing internal accounting.
+- SIMILAR MATCH: the pricing source is balance-derived but reentrancy-safety of the specific read path is undocumented or unverified from available code/audits.
+- NOT PRESENT: collateral pricing uses a TWAP or independent oracle rather than a live pool balance, or the protocol is confirmed to call the AMM's own reentrancy-check function (e.g., Curve's) before trusting the read.
+
 ## What this file does NOT cover
 
 - Pure code-logic bugs unrelated to collateral choice (missing health checks, arithmetic errors in liquidation math) — these are Universal Core / audit-weight issues. The Euler Finance case (missing insolvency check in `donateToReserves`) is the reference negative result: six professional audits missed it, and no collateral-listing decision would have caught it either, because the flaw was in Euler's own code, not in what it chose to accept.
