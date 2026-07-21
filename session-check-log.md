@@ -6,6 +6,46 @@ file has been added to any reference file automatically.
 
 ---
 
+## 2026-07-21 — Candidate: compromised off-chain oracle-signer key forging arbitrary attested prices (Ostium, ~$18M, July 2026)
+
+**Apparent mechanism (per search-summary sources only — Halborn's incident writeup and CoinDesk's
+coverage; not yet independently verified against primary transaction data or Ostium's own contracts):**
+Ostium (an Arbitrum-based perpetuals exchange) relies on a price oracle that signs price attestations
+off-chain before they are pushed on-chain. The attacker obtained the oracle's private signing key
+(the specific compromise vector is not stated in the summaries reviewed) and used it to sign and
+submit fabricated price reports — reportedly opening a position at a fake BTC price of ~$5,000, then
+closing it once the feed reverted to the real market price of ~$60,000, netting the ~$18M gap.
+
+**Why this is logged rather than checked against an existing pattern:** `derivatives.md` Pattern 2
+("Oracle/Mark Price Latency Under Leverage") covers a *legitimate* feed being stale or lagging under
+fast-moving conditions — a timing/latency problem. This is a distinct mechanism: the feed's signing
+key itself was compromised, letting an attacker forge an arbitrary, fully-fabricated price with no
+staleness or latency involved at all. `bridge.md`'s signing-interface-spoofing entries (Radiant,
+Bybit) and its key-custody patterns are the closest existing relatives in this library, but those are
+scored under the Bridge category specifically for cross-chain message signing, not a derivatives
+protocol's own price-attestation oracle. This looks like a real, checkable, and currently
+uncovered precondition (single/insufficiently-guarded oracle signing key with no on-chain sanity
+bound on reported price movement) rather than a fit for any existing pattern's match criteria as
+written.
+
+**Evidence status:** one incident, sourced from secondary reporting (Halborn, CoinDesk) only — not
+yet checked against Ostium's own contracts or a primary transaction trace. Per this library's
+two-independent-case bar, this is not yet promotable to a scored pattern even if the mechanism is
+confirmed accurate.
+
+**Relates to:** `derivatives.md` Pattern 2 (adjacent but mechanically distinct — compromised signer
+vs. stale-but-legitimate feed); `bridge.md`'s key-custody/signing-interface-spoofing family (same
+general shape — a trusted off-chain signer being the actual point of failure — but for a price
+oracle rather than a bridge relayer/multisig).
+
+**Next step:** if a second independent case of a compromised/insufficiently-guarded oracle signing
+key forging an arbitrary (not just stale) price turns up, and Ostium's own mechanism can be verified
+against primary source (contracts, transaction trace, or an authoritative post-mortem) rather than
+secondary summaries, consider a new Derivatives (or cross-cutting) pattern for "oracle signer key
+compromise" distinct from Pattern 2's latency framing. Until then, leave it here.
+
+---
+
 ## 2026-07-16 — Candidate: preview/execution divergence on fee- or loss-bearing withdrawal paths
 
 **Apparent mechanism:** a vault's `preview*` function (e.g. `previewWithdraw`/`previewRedeem`) and its paired
