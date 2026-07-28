@@ -1,0 +1,236 @@
+{
+  "metadata": {
+    "skill_name": "bug-hunt",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-07-28T19:04:44Z",
+    "evals_run": [
+      0,
+      1
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 969.222,
+        "tokens": 131996,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke",
+          "passed": true,
+          "evidence": "Finding #2: names issue()/reissue()/revoke()/registerPlots() explicitly, quotes the doc comments, and proves via 5 Foundry tests that admin reverts with AccessControlUnauthorizedAccount before reaching the internal fallback."
+        },
+        {
+          "text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates",
+          "passed": true,
+          "evidence": "Finding #1, rated CRITICAL: precisely names reassignBeneficiary() + reissue(INHERITANCE) as the mechanism, explicitly frames it as a 'who vs whether' confused-deputy bug, and notes it overrides even a real owner-set beneficiary, not just the beneficiary-less edge case."
+        },
+        {
+          "text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')",
+          "passed": true,
+          "evidence": "Numbered 4-step sequence (issue -> reassignBeneficiary(attacker) -> reissue(INHERITANCE) -> burned/re-minted to attacker), backed by an actual Foundry test (test_IssuerBypassesAdminConfirmationViaBeneficiaryReassignment) run against compiled bytecode, not just narrated."
+        },
+        {
+          "text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight",
+          "passed": true,
+          "evidence": "Explicit tiers: Finding #1 Critical, Finding #2 Medium, Finding #3 Low/Medium, with severity reasoning spelled out for each (unprivileged-facing loss vector vs. broken safety net vs. requires a second privileged action)."
+        },
+        {
+          "text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix",
+          "passed": true,
+          "evidence": "Full Solidity fix snippets for all 3 findings, each stated as compiled and re-tested against the exploit (exploit blocked + legitimate fast-path regression-checked clean)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 579.736,
+        "tokens": 78886,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)",
+          "passed": true,
+          "evidence": "Finding 4, correctly diagnosed with the same modifier-vs-internal-check mismatch reasoning used on the Onile case."
+        },
+        {
+          "text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation",
+          "passed": true,
+          "evidence": "Finding 1, rated Critical, with a full exploit sequence (buyer names self as arbiter -> raiseDispute -> recuseAndRefund) and a compiled fix requiring onlyRole(ARBITER_ROLE) plus role validation at openTrade time."
+        },
+        {
+          "text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution",
+          "passed": true,
+          "evidence": "Finding 2 (High): explicitly identifies the missing overwrite guard, plus the additional subtlety that confirmResolution doesn't bind to the specific proposal reviewed, with a front-running exploit sequence and a fix requiring an explicit exists-check plus expected-recipient/amount binding."
+        },
+        {
+          "text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)",
+          "passed": true,
+          "evidence": "Explicitly checked and ruled out for all three ETH-transferring functions, with per-function reasoning, not just an unsupported claim."
+        },
+        {
+          "text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)",
+          "passed": true,
+          "evidence": "Finding 1's exploit sequence names the actor (any buyer), starting state, and the exact 4-call sequence with the resulting impact (seller shipped goods for nothing)."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.4,
+        "passed": 2,
+        "failed": 3,
+        "total": 5,
+        "time_seconds": 262.025,
+        "tokens": 64491,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke",
+          "passed": true,
+          "evidence": "Finding #1 (rated High), same mechanism correctly named across all four functions, with the same doc-comment quoting and same root-cause explanation as the with-skill run."
+        },
+        {
+          "text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates",
+          "passed": false,
+          "evidence": "Finding #2 discusses reassignBeneficiary and cancelReissueProposal but frames the risk purely as 'a REVOKED issuer retains stale power' -- it explicitly says the blast radius is 'limited because reissue() itself is correctly gated,' missing that a CURRENT, non-revoked issuer can call reassignBeneficiary then immediately reissue(INHERITANCE) to bypass admin confirmation entirely. The actual critical bug (manufactured consent, no revocation required) is never stated."
+        },
+        {
+          "text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')",
+          "passed": false,
+          "evidence": "No numbered call sequence for any finding; findings are described conceptually with code snippets and prose ('if admin.revokeRole... is called... badIssuer can still...') rather than a step-by-step reproducible sequence, and nothing was executed against compiled bytecode."
+        },
+        {
+          "text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight",
+          "passed": false,
+          "evidence": "Top severity used is 'High' for the dead-admin-fallback finding; the actually-critical manufactured-beneficiary bypass was never identified as its own finding, so no Critical tier appears anywhere despite a Critical-grade bug existing in the contract."
+        },
+        {
+          "text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix",
+          "passed": true,
+          "evidence": "Each finding includes a Solidity fix suggestion (e.g. re-checking hasRole(ISSUER_ROLE,...) in reassignBeneficiary/cancelReissueProposal), though none were compiled or test-verified."
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 227.92,
+        "tokens": 49593,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)",
+          "passed": true,
+          "evidence": "Finding 5 (Medium): correctly diagnosed, including the specific consequence that the admin can self-grant ARBITER_ROLE to collapse the two-key guarantee to one key."
+        },
+        {
+          "text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation",
+          "passed": true,
+          "evidence": "Finding 2 (Critical), essentially identical quality and depth to the with-skill run's Finding 1 -- same root cause, same exploit sequence, same fix."
+        },
+        {
+          "text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution",
+          "passed": false,
+          "evidence": "Not mentioned anywhere in the response. The closest related finding (Finding 5) discusses the admin/arbiter trust boundary collapsing but not the specific overwrite-before-confirmation gap."
+        },
+        {
+          "text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)",
+          "passed": true,
+          "evidence": "Explicitly checked and credited as correct CEI ordering ('push-payment pattern with no reentrancy guard... checks-effects-interactions is followed correctly in all three payout functions'), no false positive."
+        },
+        {
+          "text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)",
+          "passed": true,
+          "evidence": "Finding 2's exploit sequence is a clear 4-step numbered sequence with actor, starting state, and resulting impact, comparable to the with-skill run."
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 774.479,
+        "stddev": 275.4082,
+        "min": 579.736,
+        "max": 969.222
+      },
+      "tokens": {
+        "mean": 105441.0,
+        "stddev": 37554.4411,
+        "min": 78886,
+        "max": 131996
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.6,
+        "stddev": 0.2828,
+        "min": 0.4,
+        "max": 0.8
+      },
+      "time_seconds": {
+        "mean": 244.9725,
+        "stddev": 24.1159,
+        "min": 227.92,
+        "max": 262.025
+      },
+      "tokens": {
+        "mean": 57042.0,
+        "stddev": 10534.4768,
+        "min": 49593,
+        "max": 64491
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.40",
+      "time_seconds": "+529.5",
+      "tokens": "+48399"
+    }
+  },
+  "notes": []
+}

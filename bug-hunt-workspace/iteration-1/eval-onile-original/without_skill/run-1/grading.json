@@ -1,0 +1,38 @@
+{
+  "eval_id": 0,
+  "eval_name": "eval-onile-original",
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke",
+      "passed": true,
+      "evidence": "Finding #1 (rated High), same mechanism correctly named across all four functions, with the same doc-comment quoting and same root-cause explanation as the with-skill run."
+    },
+    {
+      "text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates",
+      "passed": false,
+      "evidence": "Finding #2 discusses reassignBeneficiary and cancelReissueProposal but frames the risk purely as 'a REVOKED issuer retains stale power' -- it explicitly says the blast radius is 'limited because reissue() itself is correctly gated,' missing that a CURRENT, non-revoked issuer can call reassignBeneficiary then immediately reissue(INHERITANCE) to bypass admin confirmation entirely. The actual critical bug (manufactured consent, no revocation required) is never stated."
+    },
+    {
+      "text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')",
+      "passed": false,
+      "evidence": "No numbered call sequence for any finding; findings are described conceptually with code snippets and prose ('if admin.revokeRole... is called... badIssuer can still...') rather than a step-by-step reproducible sequence, and nothing was executed against compiled bytecode."
+    },
+    {
+      "text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight",
+      "passed": false,
+      "evidence": "Top severity used is 'High' for the dead-admin-fallback finding; the actually-critical manufactured-beneficiary bypass was never identified as its own finding, so no Critical tier appears anywhere despite a Critical-grade bug existing in the contract."
+    },
+    {
+      "text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix",
+      "passed": true,
+      "evidence": "Each finding includes a Solidity fix suggestion (e.g. re-checking hasRole(ISSUER_ROLE,...) in reassignBeneficiary/cancelReissueProposal), though none were compiled or test-verified."
+    }
+  ],
+  "summary": {
+    "pass_rate": 0.4,
+    "passed": 2,
+    "failed": 3,
+    "total": 5
+  }
+}

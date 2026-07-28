@@ -1,0 +1,39 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-vault-escrow",
+  "run": "without_skill",
+  "expectations": [
+    {
+      "text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)",
+      "passed": true,
+      "evidence": "Finding 5 (Medium): correctly diagnosed, including the specific consequence that the admin can self-grant ARBITER_ROLE to collapse the two-key guarantee to one key."
+    },
+    {
+      "text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation",
+      "passed": true,
+      "evidence": "Finding 2 (Critical), essentially identical quality and depth to the with-skill run's Finding 1 -- same root cause, same exploit sequence, same fix."
+    },
+    {
+      "text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution",
+      "passed": false,
+      "evidence": "Not mentioned anywhere in the response. The closest related finding (Finding 5) discusses the admin/arbiter trust boundary collapsing but not the specific overwrite-before-confirmation gap."
+    },
+    {
+      "text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)",
+      "passed": true,
+      "evidence": "Explicitly checked and credited as correct CEI ordering ('push-payment pattern with no reentrancy guard... checks-effects-interactions is followed correctly in all three payout functions'), no false positive."
+    },
+    {
+      "text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)",
+      "passed": true,
+      "evidence": "Finding 2's exploit sequence is a clear 4-step numbered sequence with actor, starting state, and resulting impact, comparable to the with-skill run."
+    }
+  ],
+  "notes": "This run's headline finding (Critical #1) is a bug the with-skill run completely missed: confirmResolution reads pending.recipient/pending.amount via a storage reference AFTER delete-ing that same slot, so every admin-confirmed resolution pays 0 wei to address(0) silently, permanently stranding funds. This was an accidental bug in the test fixture (not one of the 3 deliberately injected), and this run caught it with a precise, correct root-cause explanation of Solidity storage-reference aliasing -- a level of precision the with-skill run did not reach anywhere in its own review of this file.",
+  "summary": {
+    "pass_rate": 0.8,
+    "passed": 4,
+    "failed": 1,
+    "total": 5
+  }
+}

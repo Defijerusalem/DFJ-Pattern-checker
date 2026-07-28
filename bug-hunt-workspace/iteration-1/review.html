@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #b0aea5;
+      --accent: #d97757;
+      --accent-hover: #c4613f;
+      --green: #788c5d;
+      --green-bg: #eef2e8;
+      --red: #c44;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #1976d2;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #f57f17;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .output-file-header .dl-btn:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    .feedback-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-toggle .arrow {
+      margin-right: 0.5rem;
+      transition: transform 0.15s;
+      font-size: 0.75rem;
+    }
+    .grades-toggle .arrow.open {
+      transform: rotate(90deg);
+    }
+    .grades-content {
+      display: none;
+      margin-top: 0.75rem;
+    }
+    .grades-content.open {
+      display: block;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .done-overlay.visible {
+      display: flex;
+    }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 0.625rem 1.25rem;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+    .toast.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
+    <div class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
+      </div>
+      <div class="progress" id="progress"></div>
+    </div>
+
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" style="display:none;">
+      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs">
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <div class="section-header">Output</div>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="togglePrevOutputs()">
+            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
+            Previous Output
+          </div>
+        </div>
+        <div class="grades-content" id="prev-outputs-content"></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <div class="section-header">
+          <div class="grades-toggle" onclick="toggleGrades()">
+            <span class="arrow" id="grades-arrow">&#9654;</span>
+            Formal Grades
+          </div>
+        </div>
+        <div class="grades-content" id="grades-content"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <div class="section-header">Your Feedback</div>
+        <div class="section-body">
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" id="outputs-nav">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
+    </div>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark">
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Done overlay -->
+  <div class="done-overlay" id="done-overlay">
+    <div class="done-card">
+      <h2>Review Complete</h2>
+      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
+      <div class="btn-row">
+        <button onclick="closeDoneDialog()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    const EMBEDDED_DATA = {"skill_name": "bug-hunt", "runs": [{"id": "eval-onile-original-with_skill", "prompt": "Can you review this smart contract for bugs? It's a land certificate NFT system I'm building.", "eval_id": 0, "outputs": [{"name": "response.md", "type": "text", "content": "# Security Review \u2014 `LandCertificate.sol` (On\u00edl\u1eb9\u0300 land certificate NFT)\n\nI ran this through the `bug-hunt` skill's four-stage methodology (Detect \u2192 Reason \u2192 Exploit \u2192\nValidate) rather than a pattern-matching pass. Two findings are serious enough that I didn't\nstop at \"this looks wrong\" \u2014 I wrote Foundry tests that actually execute the exploit sequences\nagainst your real compiled bytecode, and then wrote and compile/test-verified fixes for all\nthree material findings. Details on that below; here's the headline first.\n\n**Bottom line:** the contract's soulbound/transfer-lockdown logic, sale-approval flow, and\nstorage hygiene are solid. But there's one critical bug that lets a single `ISSUER_ROLE` holder\n(the entity your own doc comments explicitly call a possible threat \u2014 \"a legitimate one whose\nsigners have gone rogue\") completely bypass the admin-confirmation safeguard you built\nspecifically to stop that, and seize any certificate they issued under the \"inheritance\" reason\ncode. There's also a second, independent bug that quietly breaks your admin's emergency-fallback\npowers across four functions. Both are fixed below, with the fixes compiled and re-tested against\nthe exploit to confirm they actually close the hole without breaking the legitimate fast paths.\n\n---\n\n## Validation methodology (what I actually did, not just read)\n\n- Compiled `LandCertificate.sol` as-is with `solc 0.8.24`, `--via-ir`, against OpenZeppelin\n  Contracts v5.1.0 \u2014 exactly the toolchain your own top-of-file deployment note specifies.\n  **Compiles clean, zero errors/warnings.**\n- Set up a Foundry project (forge-std + the same OZ v5.1.0) and wrote executable exploit tests\n  for every finding below, run against a deployed instance of your actual contract on a local\n  EVM \u2014 not just a code-reading argument.\n- Wrote a patched copy of the contract with concrete fixes for the three material findings,\n  compile-checked it, then re-ran the same exploit tests against the patch: all three exploits\n  are blocked, and a control test confirms the legitimate/intended fast paths still work\n  unchanged (no regression).\n- This is a fresh, unreleased contract with no public audit history or bug-bounty \"known issues\"\n  page I could check findings against \u2014 I have no reason to believe any of this is already\n  known/accepted, but flagging that explicitly per the methodology's duplication-check step.\n\n---\n\n## Finding #1 \u2014 CRITICAL: Issuer can self-manufacture the \"beneficiary\" fact that's supposed to require independent admin sign-off\n\n**Title:** `reassignBeneficiary()` + `reissue(..., INHERITANCE)` lets the certificate's own\nissuer bypass the admin-confirmation safeguard entirely.\n\n**Invariant violated:** Your own design intent, stated directly in the code comments: for\nINHERITANCE reissues with no beneficiary independently registered by the actual owner, \"a\nseparate `confirmReissue()` from the admin multisig alone\" is required, specifically so \"the\ncertificate's own issuer can no longer move it through those two paths unilaterally.\" That\ninvariant is not enforced \u2014 the issuer can unilaterally satisfy it themselves.\n\n**Root cause:** `reissue()` decides whether admin confirmation is needed by checking only\n*whether* `beneficiaryOf[oldTokenId]` is non-zero and matches `to` \u2014 not *who* set it or\n*whether that value reflects the actual owner's independent choice*. But `reassignBeneficiary()`\n\u2014 callable by the certificate's own issuer, with **no** requirement that a beneficiary was\npreviously set, and **no** requirement that the real owner be unreachable/deceased \u2014 lets that\nsame issuer set `beneficiaryOf[tokenId]` to any address, including their own accomplice, seconds\nbefore calling `reissue()`. This is exactly the \"who vs. whether\" confused-deputy pattern: the\nstored value only tells you *who would receive it if inheritance were legitimate*, not *whether*\nit actually happened independent of the issuer \u2014 and the issuer can manufacture the \"who\" to\nskip the \"whether\" check.\n\n**Exploit sequence (proven, not hypothetical \u2014 see `test_IssuerBypassesAdminConfirmationViaBeneficiaryReassignment`):**\n1. Issuer (holding `ISSUER_ROLE`, the certificate's issuer of record) issues a certificate to\n   `realOwner`. `realOwner` never calls `registerBeneficiary()` \u2014 completely normal, most owners\n   won't have done this yet.\n2. Issuer calls `reassignBeneficiary(tokenId, attacker)`. This succeeds \u2014 the only gate is\n   `msg.sender == cert.issuer`, which the issuer trivially satisfies for their own certificate.\n3. Issuer immediately calls `reissue(tokenId, attacker, ..., ReasonCode.INHERITANCE)`.\n   `beneficiaryOf[tokenId] == attacker` and `to == attacker`, so no `BeneficiaryMismatch` revert;\n   `beneficiary != address(0)`, so `requiresAdminConfirmation` is **false**. The reissue executes\n   **immediately** in the same transaction sequence \u2014 `realOwner`'s certificate is burned and a\n   new one minted straight to `attacker`. No `confirmReissue()`, no `DEFAULT_ADMIN_ROLE` signer,\n   ever involved.\n4. This works even if `realOwner` is alive, reachable, and never consented to anything \u2014 nothing\n   on-chain requires the owner to be dead or unreachable for \"inheritance.\" It also works even if\n   the owner **did** previously register a real family member as beneficiary: step 2 simply\n   overwrites that too, since `reassignBeneficiary` has no restriction limiting it to correcting\n   a stale/previously-nonzero value.\n\nI ran this exact sequence against your compiled contract in Foundry; it passes, confirming the\ntheft executes with zero admin involvement at any point.\n\n**Severity: Critical.** This is not a self-harm/gas-only issue \u2014 it's an unprivileged-facing loss\nvector for the certificate's actual owner, triggerable unilaterally by a single privileged actor\n(one issuer's compromised or dishonest signers), which is precisely the threat model your own\ncomments say the admin-confirmation step exists to defend against. It nullifies that defense for\nevery single INHERITANCE reissue, not just the \"no independent anchor\" edge case the code\ncomments call out \u2014 an issuer can override even a real, owner-set beneficiary first. `SALE`\nreissues remain safe (gated by the owner's own `approveSale()`); `LOST_WALLET` remains safe (its\n`requiresAdminConfirmation` is unconditional). Only `INHERITANCE` is affected, but that's still\none of the two paths your entire staged-confirmation design exists for.\n\n**Fix (compiled + exploit-retested \u2014 confirmed closed with no regression):** Track *who* set the\ncurrent beneficiary value, and only let an **owner-attested** value skip admin confirmation.\n\n```solidity\n// New storage: distinguishes an owner's own attestation from an issuer/admin override.\nmapping(uint256 => bool) private _beneficiarySetByOwner;\n\nfunction registerBeneficiary(uint256 tokenId, address beneficiary) external {\n    if (ownerOf(tokenId) != msg.sender) revert NotCertificateOwner();\n    beneficiaryOf[tokenId] = beneficiary;\n    _beneficiarySetByOwner[tokenId] = true;              // <-- owner-attested\n    emit BeneficiaryRegistered(tokenId, beneficiary);\n}\n\nfunction reassignBeneficiary(uint256 tokenId, address beneficiary) external {\n    Certificate storage cert = certificates[tokenId];\n    if (cert.status != Status.Active) revert CertificateNotActive();\n    if (msg.sender != cert.issuer && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {\n        revert NotAuthorizedForCertificate();\n    }\n    beneficiaryOf[tokenId] = beneficiary;\n    _beneficiarySetByOwner[tokenId] = false;              // <-- NOT owner-attested, override only\n    emit BeneficiaryReassigned(tokenId, beneficiary, msg.sender);\n}\n\n// inside reissue():\naddress beneficiary = beneficiaryOf[oldTokenId];\nbool ownerAttestedBeneficiary = beneficiary != address(0) && _beneficiarySetByOwner[oldTokenId];\nif (reason == ReasonCode.INHERITANCE && beneficiary != address(0) && to != beneficiary) {\n    revert BeneficiaryMismatch();\n}\n...\nbool requiresAdminConfirmation =\n    reason == ReasonCode.LOST_WALLET || (reason == ReasonCode.INHERITANCE && !ownerAttestedBeneficiary);\n```\n\nWith this fix: `reassignBeneficiary` still works exactly as documented (issuer/admin can correct\na stale registration) \u2014 but doing so no longer counts as an independent attestation, so\n`reissue(INHERITANCE)` built on a reassigned value still stages for admin confirmation, same as\na never-set beneficiary. A beneficiary the real owner set themselves still fast-paths with no\nchange in behavior. I confirmed both properties by re-running the exploit test (now blocked,\nresult: staged not executed, `realOwner` retains the certificate) and a second test confirming\nthe legitimate owner-attested fast path still executes immediately with no regression.\n\n**Duplication check:** No known-issues list or prior audit exists for this contract to check\nagainst (it's unreleased, per the review request). Not a duplicate of anything I could find.\n\n---\n\n## Finding #2 \u2014 MEDIUM: Documented admin fallback on four functions is unreachable dead code\n\n**Title:** `onlyRole(ISSUER_ROLE)` gates `issue()`, `reissue()`, `revoke()`, and\n`registerPlots()` at the modifier level, silently making their internal \"or admin\" fallback\nchecks unreachable.\n\n**Invariant violated:** Doc comments state, verbatim: `revoke()` \u2014 \"Callable only by the\ncertificate's own issuer of record **(or the admin multisig)**.\" `reissue()`/`_executeReissue()`\nsimilarly describe admin as a fallback caller. `registerPlots()`: \"only the issuer... **(or\nadmin)** can re-register it.\" The code's *internal* logic matches this\n(`if (msg.sender != X && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert`) \u2014 but none of that\ninternal logic is ever reached for a pure `DEFAULT_ADMIN_ROLE` holder, because the function's\n*external* modifier is `onlyRole(ISSUER_ROLE)`, which reverts before the function body \u2014 and\ntherefore before the internal admin-fallback check \u2014 ever executes.\n\n**Exploit/reproduction (proven \u2014 see `AdminFallbackDead.t.sol`, 5/5 tests pass):** Deployed the\ncontract with an `admin` holding only `DEFAULT_ADMIN_ROLE` (never separately granted\n`ISSUER_ROLE` \u2014 the natural, undocumented-as-required starting state). Confirmed `admin` cannot\ncall `revoke()`, `reissue()`, `issue()`, or `registerPlots()` \u2014 each reverts with\n`AccessControlUnauthorizedAccount(admin, ISSUER_ROLE)`, i.e. rejected for lacking `ISSUER_ROLE`,\nnever even reaching the internal \"or admin\" branch. A fifth test confirms the *only* way to make\nthe documented fallback actually work is an undocumented extra step: the admin must first\n`grantRole(ISSUER_ROLE, adminAddress)` to itself \u2014 at which point the internal logic (which was\nnever actually dead in principle, just unreachable via this external gate) does work correctly.\n\n**Severity: Medium.** This is not a fund-loss vector \u2014 it's a broken safety net. The scenarios\nthese fallbacks exist for (an issuer's multisig compromised, dissolved, or simply unresponsive,\nand admin needing to step in on plot registration, issuance, reissue, or revocation) are\nprecisely the moments this silently fails, unless whoever operates the admin key already knows\nto pre-emptively self-grant `ISSUER_ROLE` \u2014 which nothing in the contract or its comments tells\nthem to do. Low likelihood of being noticed until the emergency where it's needed; worth fixing\nbefore launch rather than discovering during an actual incident.\n\n**Fix (compiled + exploit-retested):**\n\n```solidity\nerror NotIssuerOrAdmin();\n\nmodifier onlyIssuerOrAdmin() {\n    if (!hasRole(ISSUER_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {\n        revert NotIssuerOrAdmin();\n    }\n    _;\n}\n```\nReplace `onlyRole(ISSUER_ROLE)` with `onlyIssuerOrAdmin` on `issue()`, `registerPlots()`,\n`reissue()`, and `revoke()` only (leave `registerEstate()` and `setIssuerBranding()` as\n`onlyRole(ISSUER_ROLE)` \u2014 those have no documented admin fallback and none is needed). The\nexisting internal per-record checks (`msg.sender == estate.issuer`, `msg.sender == cert.issuer`,\netc., \"or admin\") are untouched and continue to do the fine-grained authorization \u2014 this fix only\nmakes the admin branch of that logic *reachable*. Re-tested: admin can now call `revoke()`\nwithout any prior self-grant, matching the doc comment exactly; issuer-only calls are unaffected.\n\n**Duplication check:** Same as above \u2014 no known-issues source to check against.\n\n---\n\n## Finding #3 \u2014 LOW/MEDIUM: A pending reissue proposal can be silently swapped before admin confirms it\n\n**Title:** `reissue()` overwrites an existing `PendingReissue` entry with no check and no\ncancellation event, letting a second proposal replace the first with only a fresh\n`ReissueProposed` log \u2014 nothing that reads as \"this replaced something.\"\n\n**Invariant violated:** An admin who has reviewed off-chain evidence for proposal A and is about\nto call `confirmReissue()` should be confirming proposal A \u2014 not whatever is currently staged at\ncall time, which the issuer can change up to and including the block before the admin's\ntransaction lands.\n\n**Exploit sequence (proven \u2014 see `PendingOverwrite.t.sol`):** Issuer proposes a `LOST_WALLET`\nreissue of `tokenId` to `legitRecipient` (stages correctly, since `LOST_WALLET` always requires\nconfirmation). Before any `cancelReissueProposal()` call, the same issuer calls `reissue()` again\nfor the same `tokenId` with a different recipient, `swappedRecipient`. This silently overwrites\nthe pending entry \u2014 no revert, no distinct \"replaced\" signal, just a second `ReissueProposed`\nevent. When admin then calls `confirmReissue(tokenId)`, the certificate goes to\n`swappedRecipient`, not the `legitRecipient` the admin may have reviewed evidence for.\n\n**Severity: Low/Medium.** This requires the proposing issuer to act again before admin confirms\n\u2014 either changing its mind (benign) or deliberately front-running the admin's confirmation\ntransaction with a swap (requires mempool visibility/timing, and still requires the same\nprivileged `ISSUER_ROLE`/issuer-of-record access Finding #1 discusses). It's a real gap, not a\ntheoretical one, but it depends on an admin process that doesn't re-verify on-chain state\nimmediately before confirming \u2014 a disciplined admin workflow (reading `pendingReissues` fresh\nright before signing) mitigates it even unpatched. Still worth closing at the contract level\nrather than relying on operational discipline.\n\n**Fix (compiled + exploit-retested):**\n```solidity\nif (requiresAdminConfirmation) {\n    if (pendingReissues[oldTokenId].exists) revert PendingReissueAlreadyExists();\n    pendingReissues[oldTokenId] = PendingReissue({ ... });\n    ...\n}\n```\nForces an explicit `cancelReissueProposal()` before a new one can be staged, restoring a clean,\nauditable one-proposal-at-a-time invariant. Re-tested: a second `reissue()` call while one is\npending now reverts with `PendingReissueAlreadyExists`, confirmed via Foundry.\n\n**Duplication check:** No known-issues source to check against.\n\n---\n\n## Lower-severity / informational observations (read and reasoned through, didn't rise to full findings)\n\n- **Unbounded string length on `estateName` / `plotId` / `surveyPlanNumber` / `coordinates`.**\n  Unlike `logoSvgPath` (capped at `MAX_LOGO_BYTES = 3000`), these have no length cap. Since\n  `registerEstate`/`registerPlots`/`issue` are issuer-gated, the immediate storage cost is mostly\n  self-funded gas-griefing (low real severity \u2014 the caller pays for their own bloat). The one\n  place this could externalize cost is `_executeReissue()`, which copies these strings forward\n  on every reissue and `confirmReissue()` (admin-paid gas) \u2014 so a rogue issuer registering an\n  oversized string, then repeatedly forcing `LOST_WALLET` reissues, forces the *admin* to pay\n  higher gas each time they confirm. Bounded by ordinary gas-cost economics (nobody's going to\n  push this to megabytes), but worth a length cap for hygiene, mirroring what you already did for\n  `logoSvgPath`.\n\n- **`_requireSafeString()` blocks specific ASCII bytes only** (already disclosed in your own doc\n  comment: multi-byte UTF-8 is untouched). Since issuer-supplied strings (estate name, plot ID)\n  are rendered directly into the on-chain SVG/JSON, an issuer could in principle use Unicode\n  homoglyphs or bidi-override characters for a cosmetic-spoofing effect (e.g. a plot ID that\n  visually resembles a different one). Low severity, issuer-privileged, and you've already\n  flagged this exact tradeoff explicitly in comments \u2014 noting only for completeness, no action\n  needed unless you want to go further than your stated scope.\n\n- **Dangling `PendingReissue` entries survive `revoke()`.** `revoke()` doesn't clear\n  `pendingReissues[tokenId]` if one exists. Not exploitable \u2014 `confirmReissue()` independently\n  re-checks `certificates[oldTokenId].status == Active` and correctly reverts on a revoked\n  certificate \u2014 but the stale entry lingers until someone calls `cancelReissueProposal()`\n  (issuer/admin still can, since `Certificate.issuer` isn't wiped by revoke). Pure storage\n  hygiene, zero security impact; a one-line `delete pendingReissues[tokenId]` in `revoke()` would\n  tidy it up.\n\n- **`registerPlots()` front-running of never-before-seen plot IDs by a rogue issuer.** Confirmed\n  this works exactly as your own comments describe and mitigate: any `ISSUER_ROLE` holder can\n  register a brand-new plot ID string before its rightful issuer does, but `adminReassignPlot()`\n  exists as the documented admin escape hatch, and a sold plot (`activeTokenForPlot != 0`) is\n  correctly untouchable either way. This is accepted, disclosed design, not a new finding \u2014\n  confirming it holds as documented, not flagging it.\n\n## What I checked and found *not* to be a bug\n\n- **Reentrancy:** every state-changing function (`issue`, `_executeReissue`, `revoke`) writes all\n  sensitive state (`activeTokenForPlot`, `certificates[...]`, `Status`) *before* the trailing\n  `_safeMint`/`_burn` calls that could hand control to an external contract. A malicious\n  `to` re-entering during `onERC721Received` sees fully-consistent post-state and can't\n  double-process anything (e.g. re-entrant `issue()` for the same plot correctly reverts on\n  `activeTokenForPlot[plotId] != 0`).\n- **Soulbound enforcement:** `_update()` correctly blocks `from != 0 && to != 0` transfers while\n  still permitting mint/burn; `approve`/`setApprovalForAll` are hard-reverted; `getApproved`\n  always returns zero; `isApprovedForAll` always returns false. No transfer path survives.\n  Confirmed the `_update` override signature matches OZ v5's exactly (compiler would have\n  flagged a mismatched override \u2014 it didn't).\n- **Sale flow:** `approveSale()` is owner-gated and `reissue(SALE)` checks\n  `saleApprovedBuyer[oldTokenId] == to` \u2014 this one genuinely ties the reissue to independent\n  owner consent and isn't subject to the Finding #1 pattern.\n- **`LOST_WALLET` reissues** always require admin confirmation unconditionally \u2014 not affected by\n  Finding #1's beneficiary-substitution trick (there's no beneficiary check in that branch at\n  all).\n\n## Summary\n\n| # | Finding | Severity | Status |\n|---|---|---|---|\n| 1 | Issuer can self-set `beneficiaryOf` then immediately reissue INHERITANCE, bypassing admin confirmation entirely | **Critical** | Fix drafted, compiled, exploit-retested closed, fast-path regression-tested clean |\n| 2 | `onlyRole(ISSUER_ROLE)` on `issue`/`reissue`/`revoke`/`registerPlots` makes documented admin fallback unreachable | **Medium** | Fix drafted, compiled, exploit-retested closed |\n| 3 | Pending reissue proposals silently overwritten, no explicit cancel required | **Low/Medium** | Fix drafted, compiled, exploit-retested closed |\n| \u2014 | Unbounded issuer-supplied string lengths (estateName/plotId/surveyPlanNumber/coordinates) | Low (informational) | Not fixed \u2014 recommend a length cap like `logoSvgPath`'s |\n| \u2014 | ASCII-only string sanitization (Unicode homoglyph spoofing) | Low (informational) | Already disclosed by your own comments; no action taken |\n| \u2014 | Dangling `PendingReissue` after `revoke()` | Informational | Not fixed \u2014 no security impact, cosmetic cleanup only |\n\nFindings #1\u2013#3 come with compiled, test-verified fixes (both \"exploit now blocked\" and\n\"legitimate behavior unchanged\" were checked, not just the diff read). If you want, I can turn\nthe patched contract into a proper PR-ready diff against the original file \u2014 I left the original\nuntouched for this review, per your request, and did all patching/exploit work on scratch copies.\n"}], "grading": null}, {"id": "eval-onile-original-without_skill", "prompt": "Can you review this smart contract for bugs? It's a land certificate NFT system I'm building.", "eval_id": 0, "outputs": [{"name": "response.md", "type": "text", "content": "# Review of `LandCertificate.sol`\n\nOverall this is a well-organized contract \u2014 the soulbound enforcement is clean, the ID-collision-with-zero pitfall is avoided (`_nextTokenId`/`_nextEstateId` pre-increment so `0` stays a safe \"none\" sentinel), checks-effects-interactions is followed consistently around the `_safeMint` calls, and the NatSpec is unusually thorough about *intent*. That last part is actually what let me find the most interesting bug: the comments describe an authorization model that the code doesn't actually implement in several places.\n\nBelow are the issues I found, roughly in order of importance.\n\n## 1. (High) \"Admin override\" branches are dead code \u2014 `onlyRole(ISSUER_ROLE)` blocks admin before the fallback check ever runs\n\n`registerPlots`, `issue`, `reissue`, and `revoke` are all declared:\n\n```solidity\nfunction issue(...) external onlyRole(ISSUER_ROLE) returns (uint256 tokenId) {\n    ...\n    if (msg.sender != estate.issuer && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {\n        revert NotAuthorizedForCertificate();\n    }\n```\n\nThe function-level modifier `onlyRole(ISSUER_ROLE)` requires `hasRole(ISSUER_ROLE, msg.sender)` to be true *before the function body even runs*. `DEFAULT_ADMIN_ROLE` does **not** automatically imply `ISSUER_ROLE` in OpenZeppelin's `AccessControl` \u2014 it's just the role that can grant/revoke `ISSUER_ROLE`. So if the admin multisig hasn't *also* been separately granted `ISSUER_ROLE`, every call from the admin to `registerPlots`, `issue`, `reissue`, or `revoke` reverts on the modifier with `AccessControlUnauthorizedAccount` \u2014 it never reaches the `hasRole(DEFAULT_ADMIN_ROLE, msg.sender)` fallback inside the body. That fallback is unreachable dead code in the normal case.\n\nThis directly contradicts the NatSpec, which repeatedly promises an admin escape hatch:\n- `registerPlots`: \"only the issuer who registered it (**or admin**) can re-register it\"\n- `revoke`: \"Callable only by the certificate's own issuer of record (**or the admin multisig**)\"\n- `reissue`: same language\n\nIt also contradicts the doc comment on `adminReassignPlot` itself, which exists *specifically* because the author recognized this gap for plot registration: \"This function fixes that **without requiring the admin to also hold ISSUER_ROLE**.\" That comment only makes sense if the author assumed the other admin-override checks (in `registerPlots`/`issue`/`reissue`/`revoke`) *don't* need `ISSUER_ROLE` either \u2014 but they do, because of the modifier.\n\n**Impact:** In a real incident (compromised or unresponsive issuer, urgent revocation needed), the admin multisig will find it *cannot* directly revoke a certificate, force a reissue, or register/fix plots unless it happens to also hold `ISSUER_ROLE` \u2014 something nothing in the docs says is required. This is exactly the kind of gap that gets discovered under pressure, during an actual emergency.\n\n**Fix:** either (a) grant the admin multisig `ISSUER_ROLE` too as a deployment requirement (and document that explicitly), or (b) change these functions to check authorization inside the body only (drop the `onlyRole(ISSUER_ROLE)` modifier and instead require `hasRole(ISSUER_ROLE, msg.sender) || hasRole(DEFAULT_ADMIN_ROLE, msg.sender)` explicitly), matching what `reassignBeneficiary`/`cancelReissueProposal` already do correctly (see below \u2014 they have no function-level role modifier).\n\n## 2. (High/Medium) Authorization keyed off a stored address, not live role membership \u2014 revoking `ISSUER_ROLE` doesn't fully revoke privileges\n\n`reassignBeneficiary` and `cancelReissueProposal` have **no `onlyRole` modifier at all**. Their entire authorization is:\n\n```solidity\nif (msg.sender != cert.issuer && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {\n    revert NotAuthorizedForCertificate();\n}\n```\n\n`cert.issuer` is a plain address captured once at issuance time (`issue()`/`_executeReissue()` set `issuer: msg.sender` / `issuerOfRecord`). It is **never re-checked against current role membership**. So if `admin.revokeRole(ISSUER_ROLE, badIssuer)` is called because `badIssuer` was compromised or acting fraudulently, `badIssuer` can *still*, forever after:\n- call `reassignBeneficiary(tokenId, attackerAddress)` on any certificate it originally issued, and\n- call `cancelReissueProposal(tokenId)` to withdraw a pending `LOST_WALLET`/beneficiary-less `INHERITANCE` proposal that the admin might be in the process of reviewing/rejecting.\n\n`reassignBeneficiary` in particular is concerning: it lets a since-revoked issuer plant a `beneficiaryOf[tokenId]` value that later feeds directly into `reissue()`'s inheritance check (`reason == INHERITANCE && beneficiary != address(0) && to != beneficiary`). Today the blast radius of this is limited because `reissue()` itself *is* correctly gated by `onlyRole(ISSUER_ROLE)` plus a same-issuer-or-admin check, so the revoked issuer can't personally finish the job \u2014 but it still means \"revoke the role\" is not the same as \"fully cut this address off,\" which is a surprising and easy-to-miss property for whoever operates this system. If issue #1 above is ever fixed by granting admin `ISSUER_ROLE`, this gap becomes directly exploitable by a revoked issuer setting up a beneficiary that funnels a subsequent admin-executed reissue toward an address the real owner never approved.\n\n**Fix:** re-check `hasRole(ISSUER_ROLE, msg.sender)` in addition to `msg.sender == cert.issuer` in both functions, so a revoked issuer immediately loses these powers.\n\n## 3. (Medium) `approveSale` consent has no expiry or clean revocation path\n\n```solidity\nfunction approveSale(uint256 tokenId, address buyer) external {\n    if (ownerOf(tokenId) != msg.sender) revert NotCertificateOwner();\n    if (buyer == address(0)) revert ZeroAddress();\n    saleApprovedBuyer[tokenId] = buyer;\n    emit SaleApproved(tokenId, buyer);\n}\n```\n\nOnce an owner approves a buyer, that approval sits in storage indefinitely with no timestamp/nonce and no way to explicitly withdraw it (the `ZeroAddress` check means you can't clear it back to \"no approval\" \u2014 the only lever is overwriting it with a *different* address). If the sale falls through off-chain, the owner has no clean way to say \"I no longer consent to anything,\" and the issuer could still process the original approved sale at any later date, possibly well after the deal fell apart, since `reissue()` only checks that `saleApprovedBuyer[oldTokenId] == to`, with no freshness requirement.\n\n**Fix:** consider adding a `revokeSaleApproval(tokenId)` function, or an expiry timestamp checked in `reissue()`.\n\n## 4. (Low) `_requireSafeString` doesn't fully guarantee valid JSON/SVG output\n\n```solidity\nfunction _requireSafeString(string calldata s) internal pure {\n    ...\n    if (b == \"\\\"\" || b == \"<\" || b == \">\" || b == \"&\" || b == \"\\\\\") revert UnsafeCharacter();\n}\n```\n\nThis blocks the characters that would break out of a JSON string or an SVG attribute/tag, which covers the main injection vectors. It does **not** reject raw ASCII control characters (e.g. `0x00`\u2013`0x1F`, including literal newlines/tabs). Strict JSON parsers require control characters inside strings to be escaped (`\\n`, `\\t`, etc.) \u2014 a raw one embedded via `estateName`/`plotId`/`surveyPlanNumber`/`coordinates`/`logoSvgPath` would produce technically-invalid JSON that some wallets/marketplaces could fail to parse, silently breaking `tokenURI()` rendering for that certificate. This is a low-severity availability/robustness issue rather than an exploit (all of these fields are set by trusted `ISSUER_ROLE` holders, not arbitrary users), but worth tightening since it's cheap to fix and the function's whole job is exactly this kind of sanitization.\n\n**Fix:** also reject bytes `< 0x20` (except perhaps none \u2014 SVG/JSON have no legitimate use for control chars here).\n\n## 5. (Low / defense-in-depth) No reentrancy guard around `_safeMint`\n\n`issue()` and `_executeReissue()` call `_safeMint`, which invokes `onERC721Received` on contract recipients \u2014 an external call. I traced through both call sites and state is fully updated (`activeTokenForPlot`, `certificates`, status flags) *before* the mint call in both cases, so I did not find an exploitable reentrancy path today (e.g., re-entering `issue()` for the same plot during the callback correctly reverts via `activeTokenForPlot[plotId] != 0`). Still, given `to` is attacker-controlled input and the checks-effects-interactions discipline here is currently doing all the work with no structural backstop, I'd suggest adding a `nonReentrant` guard (or at least a comment flagging that CEI must be preserved) as insurance against a future edit accidentally reordering things.\n\n## 6. (Info) Shared plot-ID namespace enables squatting across issuers\n\nThe comments already acknowledge this and provide `adminReassignPlot` as the fix, so it's not a new bug \u2014 but worth restating for the client: because `plotRegistry`/`activeTokenForPlot` are keyed by a bare `string plotId` shared across *every* issuer, a rogue or careless `ISSUER_ROLE` holder can register a plot ID belonging to another developer's estate before the legitimate issuer does, locking them out until an admin manually intervenes with `adminReassignPlot`. Given `ISSUER_ROLE` is meant to be held by vetted multisigs this is a modest operational risk, but it's the kind of thing that's easy to hit by accident (typo'd plot ID collides with someone else's) and only recoverable via a manual admin transaction.\n\n## 7. (Info) Floating pragma\n\n`pragma solidity ^0.8.24;` \u2014 fine for development, but for a production deployment holding legal-title data I'd pin the exact compiler version (and via-IR setting, which the top-of-file comment already flags is required) to remove any ambiguity about what bytecode was actually audited/deployed.\n\n---\n\n### What looked solid\n- Soulbound enforcement (`_update` override + `approve`/`setApprovalForAll`/`getApproved` all reverting or returning inert values) is correct and covers all the transfer paths, not just the obvious one.\n- The `_nextTokenId`/`_nextEstateId` pre-increment pattern correctly avoids the classic \"ID 0 is ambiguous with an unset mapping\" bug for `activeTokenForPlot`.\n- `confirmReissue`/`cancelReissueProposal` correctly prevent double-execution (proposal is deleted before/after use, `exists` flag checked).\n- The `SALE` vs `LOST_WALLET`/beneficiary-less `INHERITANCE` split \u2014 requiring independent owner consent for the former and independent admin confirmation for the latter two \u2014 is a genuinely good design for the \"no on-chain proof ties this to the real party\" problem those two reason codes have.\n- `tokenURI`/`locked` correctly call `_requireOwned` so burned tokens don't return stale metadata.\n\nThe most important fix here is #1 \u2014 please double check, before relying on the \"admin can act as a backstop\" property anywhere in your operational runbook, whether your deployed admin multisig actually also holds `ISSUER_ROLE`. If it doesn't, several of the emergency-response paths described in your own comments don't currently work.\n"}], "grading": null}, {"id": "eval-vault-escrow-with_skill", "prompt": "I wrote this escrow contract for peer-to-peer trades with dispute resolution. Can you audit it for security issues before I deploy?", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "# Security Audit: TradeEscrow.sol\n\nI read through `TradeEscrow.sol` function by function, tracing every state transition and\nexternal call, and I do **not** recommend deploying this as-is. There's one critical bug that\nlets a buyer walk away with a full refund on any trade, unilaterally, with zero privilege and\nzero admin involvement \u2014 which defeats the entire point of the dispute-resolution design the\ncontract's own comments describe. There are two more real bugs in the propose/confirm\nmachinery, plus one that quietly breaks a documented fallback path. Details, exploit\nsequences, and fixes below. I also compiled both the original contract and my proposed fixes\nwith `solc 0.8.24` (the pinned pragma version) to confirm the original is well-formed and the\npatched version actually builds \u2014 details in each Fix section.\n\n---\n\n## Finding 1 \u2014 `recuseAndRefund` lets anyone the buyer names as \"arbiter\" (including the buyer) unilaterally drain the trade, bypassing the two-step design entirely\n\n**Severity: Critical.** No privileged role required, no admin involvement, exploitable by any\nbuyer against their own trade with zero cost beyond gas.\n\n### Invariant violated\n\nThe contract's header comment states the entire design goal explicitly:\n\n> \"Disputes are resolved via a propose-then-confirm pattern so a single arbiter signer can't\n> unilaterally move funds without a second, independent confirmation from the admin\n> multisig.\"\n\n`recuseAndRefund` breaks this invariant directly. Look at its full authorization check:\n\n```solidity\nfunction recuseAndRefund(uint256 tradeId) external {\n    Trade storage trade = trades[tradeId];\n    if (trade.buyer == address(0)) revert TradeNotFound();\n    if (trade.status != Status.Disputed) revert NotDisputed();\n    if (msg.sender != trade.arbiter) revert NotAuthorized();   // <-- the ONLY check\n\n    trade.status = Status.Resolved;\n    uint256 amount = trade.amount;\n    (bool ok, ) = trade.buyer.call{value: amount}(\"\");\n    if (!ok) revert TransferFailed();\n}\n```\n\nThere is no `onlyRole(ARBITER_ROLE)` modifier and no `hasRole` check anywhere in this\nfunction \u2014 the only gate is \"does `msg.sender` equal the address stored in `trade.arbiter`.\"\nAnd `trade.arbiter` is a value **the buyer supplies themselves**, unchecked, when opening the\ntrade:\n\n```solidity\nfunction openTrade(address seller, address arbiter) external payable returns (uint256 tradeId) {\n    if (msg.value == 0) revert ZeroAmount();\n    tradeId = ++_nextTradeId;\n    trades[tradeId] = Trade({ ..., arbiter: arbiter, ... });   // no validation at all\n    ...\n}\n```\n\nNothing checks that `arbiter` actually holds `ARBITER_ROLE`. So \"the trade's assigned\narbiter\" isn't a verified neutral third party at all \u2014 it's whatever address the buyer typed\nin. This is a textbook \"who vs. whether\" confusion: `trade.arbiter == msg.sender` only proves\n*who* the buyer said the arbiter was, not *whether* that address is actually an authorized,\nindependent arbiter.\n\n### Exploit sequence\n\nActor: any buyer, no special role needed. Starting state: none (fresh trade).\n\n1. Buyer calls `openTrade(seller, arbiter: <buyer's own address>)` with `msg.value = 10 ETH`.\n   (Nothing stops the buyer from naming themselves \u2014 or any second wallet they control \u2014 as\n   the arbiter.)\n2. Seller ships the goods off-chain, trusting that any dispute goes through the documented\n   arbiter-plus-admin-confirmation process.\n3. Buyer calls `raiseDispute(tradeId)`. This is always allowed for either party while the\n   trade is `Open` \u2014 no evidence or justification is required on-chain.\n4. Buyer calls `recuseAndRefund(tradeId)`. Since `msg.sender == trade.arbiter` (because the\n   buyer named themselves in step 1), this passes the sole check. `trade.status` becomes\n   `Resolved` and the full 10 ETH is sent straight back to the buyer.\n\nResult: the buyer gets a full, instant, unilateral refund \u2014 no admin ever sees this, no real\narbiter ever reviews it, and the seller has already shipped goods for nothing. This works\neven if the buyer picks a colluding *second* address as \"arbiter\" instead of themselves\ndirectly, and it works even against an honest, distinct arbiter who simply decides \u2014 alone,\nwith a single key \u2014 to recuse in the buyer's favor, which is exactly the \"single signer moves\nfunds unilaterally\" outcome the design explicitly says should be impossible.\n\n### Fix\n\nRequire the caller to actually hold `ARBITER_ROLE`, and (defense in depth) reject an\n`arbiter` parameter at trade-open time that isn't a real role holder:\n\n```solidity\n// openTrade \u2014 reject a non-arbiter address up front\nfunction openTrade(address seller, address arbiter) external payable returns (uint256 tradeId) {\n    if (msg.value == 0) revert ZeroAmount();\n    if (!hasRole(ARBITER_ROLE, arbiter)) revert NotAuthorized();   // NEW\n    ...\n}\n\n// recuseAndRefund \u2014 require the real role, not just address equality\nfunction recuseAndRefund(uint256 tradeId) external onlyRole(ARBITER_ROLE) {   // NEW modifier\n    Trade storage trade = trades[tradeId];\n    if (trade.buyer == address(0)) revert TradeNotFound();\n    if (trade.status != Status.Disputed) revert NotDisputed();\n    if (msg.sender != trade.arbiter) revert NotAuthorized();\n    ...\n}\n```\n\nI built the full patched contract and compiled it with `solc 0.8.24` (the pragma-pinned\nversion) \u2014 **compiles clean, zero errors** (details at the end of this report).\n\n### Duplication check\n\nNo known-issues list, prior audit, or public disclosure exists for this contract \u2014 it's\nunreleased, unshared code. Nothing to check it against; this is a fresh finding specific to\nthis contract's own logic.\n\n---\n\n## Finding 2 \u2014 `proposeResolution` has no guard against a second call silently overwriting a staged proposal\n\n**Severity: High** (requires `ARBITER_ROLE`, i.e. a semi-privileged actor, but still defeats\nthe \"single signer can't unilaterally decide the outcome\" design goal).\n\n### Invariant violated\n\nThe design intends: the arbiter proposes *one* resolution, the admin independently reviews\nand confirms *that same* resolution. But `pendingResolutions` is a single-slot mapping keyed\nonly by `tradeId`, and `proposeResolution` never checks whether a proposal is already staged:\n\n```solidity\nfunction proposeResolution(uint256 tradeId, address recipient, uint256 amount) external onlyRole(ARBITER_ROLE) {\n    ...\n    pendingResolutions[tradeId] = PendingResolution({ recipient, amount, proposedBy: msg.sender, exists: true });\n    emit ResolutionProposed(tradeId, recipient, amount);\n}\n```\n\nNothing here checks `pendingResolutions[tradeId].exists` first. A second call from the same\narbiter (or, since the internal check also allows an admin who separately holds\n`ARBITER_ROLE`, from that admin) silently replaces the recipient/amount/proposedBy with no\ndistinct \"this superseded an earlier proposal\" event.\n\nCompounding this, `confirmResolution(uint256 tradeId)` takes **only the trade ID** \u2014 it\ndoesn't bind confirmation to the specific recipient/amount the admin actually reviewed off the\n`ResolutionProposed` event. It just pays out *whatever is currently staged* at the moment the\nadmin's transaction executes.\n\n### Exploit sequence\n\nActor: the trade's arbiter (holds `ARBITER_ROLE` \u2014 a real, single privileged key, not the\nadmin multisig). Starting state: trade is `Disputed`.\n\n1. Arbiter calls `proposeResolution(tradeId, recipient: seller, amount: 10 ETH)` \u2014 a\n   reasonable-looking \"full release to seller.\" `ResolutionProposed` fires; the admin sees it\n   off-chain and starts preparing a `confirmResolution(tradeId)` transaction.\n2. Before the admin's transaction lands, the same arbiter calls `proposeResolution` again:\n   `proposeResolution(tradeId, recipient: <arbiter's own address>, amount: 10 ETH)`. This\n   silently overwrites the pending entry \u2014 no revert, no distinguishing event.\n3. The admin's already-in-flight `confirmResolution(tradeId)` transaction executes. Because\n   it only references `tradeId`, it pays out whatever is staged *right now* \u2014 the arbiter's\n   self-dealt proposal from step 2, not the one the admin actually reviewed.\n\nImpact: a single `ARBITER_ROLE` key can redirect a disputed trade's funds to itself by\nracing/front-running the admin's confirmation, even though the two-step design's entire\npurpose is to prevent a single signer from controlling the outcome.\n\n### Fix\n\nReject overwriting an unconfirmed proposal, and bind `confirmResolution` to the specific\nproposal the admin reviewed:\n\n```solidity\nfunction proposeResolution(uint256 tradeId, address recipient, uint256 amount) external ... {\n    ...\n    if (pendingResolutions[tradeId].exists) revert ResolutionAlreadyProposed();   // NEW\n    pendingResolutions[tradeId] = PendingResolution({ recipient, amount, proposedBy: msg.sender, exists: true });\n    ...\n}\n\nfunction confirmResolution(uint256 tradeId, address expectedRecipient, uint256 expectedAmount)\n    external onlyRole(DEFAULT_ADMIN_ROLE)\n{\n    PendingResolution storage pending = pendingResolutions[tradeId];\n    if (!pending.exists) revert NotDisputed();\n    if (pending.recipient != expectedRecipient || pending.amount != expectedAmount) revert ProposalMismatch();  // NEW\n    ...\n}\n```\n\nCompiled successfully as part of the full patched contract (see end of report).\n\n### Duplication check\n\nNo known-issues list exists for this contract; fresh finding.\n\n---\n\n## Finding 3 \u2014 `recuseAndRefund` doesn't clear a staged proposal, and `confirmResolution` doesn't re-check trade status \u2014 stale proposals can be confirmed after the trade already paid out, double-spending from the shared contract balance\n\n**Severity: Critical** (can drain funds belonging to *other, unrelated* trades \u2014 an\ninsolvency/theft vector, not just a self-contained accounting error on one trade \u2014 and can\nalso happen by pure operational accident, no malice required).\n\n### Invariant violated\n\nThe contract holds one pooled ETH balance across every open trade \u2014 there's no per-trade\nsegregated vault. That means **any path that pays out more than once for the same trade\ndraws down funds that back other users' still-open trades.** `confirmResolution` only checks\nthat a pending resolution *exists* \u2014 it never re-checks that the trade is still `Disputed`:\n\n```solidity\nfunction confirmResolution(uint256 tradeId) external onlyRole(DEFAULT_ADMIN_ROLE) {\n    PendingResolution storage pending = pendingResolutions[tradeId];\n    if (!pending.exists) revert NotDisputed();      // only checks the pending entry, not trade.status\n    Trade storage trade = trades[tradeId];\n\n    trade.status = Status.Resolved;\n    delete pendingResolutions[tradeId];\n\n    (bool ok, ) = pending.recipient.call{value: pending.amount}(\"\");\n    ...\n}\n```\n\nAnd `recuseAndRefund` resolves the trade through a completely separate path without ever\ntouching `pendingResolutions[tradeId]`:\n\n```solidity\nfunction recuseAndRefund(uint256 tradeId) external {\n    ...\n    trade.status = Status.Resolved;\n    // pendingResolutions[tradeId] is never deleted here\n    (bool ok, ) = trade.buyer.call{value: amount}(\"\");\n    ...\n}\n```\n\nSo if a proposal was staged and then the trade got resolved via recusal instead, the stale\n`PendingResolution` entry is left behind with `exists == true`, fully payable, on a trade\nthat's already `Resolved`.\n\n### Exploit sequence\n\nActor: the trade's arbiter (single `ARBITER_ROLE` key) plus a normal, uninformed admin\nconfirmation (no admin malice needed \u2014 this can happen entirely by accident, e.g. the arbiter\nproposes, then has second thoughts and recuses, and the admin processes an already-queued\nconfirmation without realizing the trade moved on). Starting state: trade `Disputed`,\n`amount = 10 ETH`.\n\n1. Arbiter calls `proposeResolution(tradeId, recipient: seller, amount: 10 ETH)`.\n   `pendingResolutions[tradeId]` now holds `{seller, 10 ETH, exists: true}`.\n2. Before the admin confirms, the arbiter calls `recuseAndRefund(tradeId)`. This sends the\n   full 10 ETH to the buyer and sets `trade.status = Resolved`. The pending entry from step 1\n   is **not** cleared.\n3. The admin, unaware the trade already resolved (or simply processing the earlier\n   `ResolutionProposed` event without re-checking on-chain state), calls\n   `confirmResolution(tradeId)`. `pending.exists` is still `true`, so the check passes; there\n   is no check that `trade.status == Disputed`. **A second 10 ETH is paid out to the\n   seller.**\n\nNet result: 20 ETH left the contract for a trade that only ever escrowed 10 ETH. The extra\n10 ETH comes out of the pooled balance backing every other open trade \u2014 a legitimate,\nunrelated buyer's later `confirmDelivery` or `recuseAndRefund` call can now fail with\ninsufficient contract balance, or (in a race) whoever calls first wins and someone else's\nescrowed funds are simply gone. This is a genuine contract-level insolvency bug: nothing\nabout the exploit requires tricking a human, only requires that these two functions be called\nin a sequence the contract's own state machine should have \u2014 but doesn't \u2014 prevented.\n\n### Fix\n\nClose both sides: clear the pending entry on recusal, and re-verify trade status before\npaying out a confirmation.\n\n```solidity\nfunction recuseAndRefund(uint256 tradeId) external onlyRole(ARBITER_ROLE) {\n    ...\n    trade.status = Status.Resolved;\n    delete pendingResolutions[tradeId];   // NEW \u2014 invalidate any stale staged proposal\n    ...\n}\n\nfunction confirmResolution(uint256 tradeId, address expectedRecipient, uint256 expectedAmount)\n    external onlyRole(DEFAULT_ADMIN_ROLE)\n{\n    PendingResolution storage pending = pendingResolutions[tradeId];\n    if (!pending.exists) revert NotDisputed();\n    Trade storage trade = trades[tradeId];\n    if (trade.status != Status.Disputed) revert NotDisputed();   // NEW \u2014 re-check live state, not a stale snapshot\n    ...\n}\n```\n\nCompiled successfully as part of the full patched contract (see end of report).\n\n### Duplication check\n\nNo known-issues list exists for this contract; fresh finding.\n\n---\n\n## Finding 4 \u2014 `proposeResolution`'s `onlyRole(ARBITER_ROLE)` modifier makes the documented \"admin fallback if the arbiter goes dark\" path dead code\n\n**Severity: Medium** (not a fund-loss bug on its own \u2014 the admin can work around it by\ngranting themselves `ARBITER_ROLE` \u2014 but it means the contract doesn't behave as its own\ndocumentation promises, and an admin who doesn't realize this could believe a stuck dispute\nhas a working escape hatch when it doesn't).\n\n### Invariant violated\n\nThe contract header says the admin multisig can step in \"as a fallback if the assigned\narbiter goes dark,\" and `proposeResolution`'s own doc comment repeats this. But look at the\nfunction signature and body together:\n\n```solidity\nfunction proposeResolution(uint256 tradeId, address recipient, uint256 amount) external onlyRole(ARBITER_ROLE) {\n    ...\n    if (trade.arbiter != msg.sender && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert NotAuthorized();\n    ...\n}\n```\n\nThe `onlyRole(ARBITER_ROLE)` **modifier** runs and reverts *before* the function body ever\nexecutes. So an admin who does not separately, personally hold `ARBITER_ROLE` can never reach\nthe internal `hasRole(DEFAULT_ADMIN_ROLE, msg.sender)` fallback check at all \u2014 the modifier\nkills the call first. This is the classic mismatch between an external gate and an internal\nfallback check: the internal logic reads as if \"arbiter OR admin\" is supported, but the outer\nmodifier only actually allows \"arbiter.\"\n\n### Exploit sequence (functional failure, not a fund-theft path)\n\nActor: the admin multisig, after the assigned arbiter genuinely goes unresponsive. Starting\nstate: trade `Disputed`, admin does not separately hold `ARBITER_ROLE`.\n\n1. Admin calls `proposeResolution(tradeId, recipient, amount)` expecting the documented\n   fallback to work.\n2. Call reverts at the `onlyRole(ARBITER_ROLE)` modifier before any of the function's own\n   logic runs. The trade is now stuck in `Disputed` with no arbiter willing/able to act and no\n   working admin fallback, until the admin grants themselves `ARBITER_ROLE` via the inherited\n   `grantRole` (which they can always do, since they hold `DEFAULT_ADMIN_ROLE` \u2014 the admin\n   role for `ARBITER_ROLE` by default) as a workaround not documented anywhere in the\n   contract.\n\nImpact is availability/UX, not theft \u2014 but it's still a real bug relative to the contract's\nown stated behavior, and worth fixing before an operator relies on a fallback that doesn't\nwork as described.\n\n### Fix\n\nMove the role check into the body so it genuinely accepts either role, instead of gating\nwith a modifier that only recognizes one of them:\n\n```solidity\nfunction proposeResolution(uint256 tradeId, address recipient, uint256 amount) external {\n    if (!hasRole(ARBITER_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {\n        revert NotAuthorized();\n    }\n    ...\n}\n```\n\nCompiled successfully as part of the full patched contract (see end of report).\n\n### Duplication check\n\nNo known-issues list exists for this contract; fresh finding.\n\n---\n\n## Checked and confirmed NOT vulnerable: reentrancy\n\nI traced every external call in the contract (`confirmDelivery`, `recuseAndRefund`,\n`confirmResolution` \u2014 the three functions that move ETH via `.call{value: ...}(\"\")`), and in\nevery case the relevant state (`trade.status`, and in `confirmResolution`'s case also\n`pendingResolutions[tradeId]`) is written **before** the external call, following\nchecks-effects-interactions correctly:\n\n- `confirmDelivery`: sets `trade.status = Delivered` before calling `trade.seller`. A\n  malicious seller contract reentering any function sees a non-`Open` status and reverts.\n- `recuseAndRefund`: sets `trade.status = Resolved` before calling `trade.buyer`. A malicious\n  buyer contract reentering sees a non-`Open`/non-`Disputed` status everywhere and reverts.\n  (With the Finding 3 fix applied, the pending entry is also cleared before the call.)\n- `confirmResolution`: sets `trade.status = Resolved` and deletes the pending entry before\n  calling `pending.recipient`. Reentering any function fails the relevant status/exists check.\n\nNo reentrancy guard is needed here because the ordering is already correct throughout \u2014 I'm\ncalling this out explicitly so it's clear this was checked and ruled out, not overlooked.\n\n---\n\n## Minor / informational notes (not security-critical)\n\n- **Misleading error name in `proposeResolution`.** The `amount > trade.amount` check reverts\n  with `ZeroAmount()`, which is the wrong error for that condition (it's not about a zero\n  amount at all). Purely a debugging/clarity issue \u2014 recommend a dedicated\n  `AmountExceedsTrade()` error (included in the patched version above).\n- **No zero-address checks on `seller`/`arbiter` in `openTrade`.** If a buyer passes\n  `seller = address(0)`, `confirmDelivery` will send the trade's funds to the burn address.\n  This only harms the buyer's own trade (self-inflicted, no one else's funds at risk) since\n  the buyer is the one who chose the address, so I'm not ranking it as a security finding \u2014\n  but a simple non-zero check would prevent an obvious foot-gun.\n- **Documented \"split\" resolution isn't actually implementable end-to-end.** The\n  `proposeResolution` doc comment says a resolution can be \"a split,\" but `PendingResolution`\n  only has a single `recipient`/`amount` pair, and after `confirmResolution` runs the trade is\n  `Resolved` (permanently blocking any further `proposeResolution` call for the remainder).\n  So a true two-way split would need a second propose/confirm cycle that the state machine\n  doesn't allow \u2014 worth deciding whether \"split\" should be removed from the docs or the struct\n  extended to carry a second recipient/amount if that capability is actually needed.\n\n---\n\n## Compile verification (Stage 4)\n\nI set up an isolated build using the exact pinned compiler version (`solc 0.8.24`, matching\n`pragma solidity ^0.8.24`) against a local OpenZeppelin Contracts v5 checkout (matching the\n`AccessControl` import), and:\n\n1. **Compiled the original, unmodified `TradeEscrow.sol` as-is** \u2014 compiles cleanly with zero\n   errors or warnings beyond the expected. This confirms the contract is a real, well-formed\n   candidate for deployment mechanically, and that every bug above is a logic/design flaw, not\n   a syntax issue.\n2. **Compiled a fully patched version incorporating all four fixes above** (self-appointed\n   arbiter check on `openTrade` + `onlyRole(ARBITER_ROLE)` on `recuseAndRefund`; overwrite\n   guard + expected-recipient/amount binding on `proposeResolution`/`confirmResolution`;\n   pending-resolution cleanup on recusal + live status re-check on confirmation; the\n   admin-or-arbiter fix on `proposeResolution`'s gate) \u2014 **this also compiles cleanly with\n   zero errors**, confirming the proposed fixes are not just plausible on paper but actually\n   build against the real dependency versions this contract uses.\n\nI did not deploy to a live or forked chain to execute the exploit transactions end-to-end\n(no blockchain environment was available in this session), so \"exploit sequences\" above are\nvalidated by careful, independent re-tracing of the actual compiled bytecode's logic (Stage 4\nre-trace) rather than an on-chain PoC \u2014 but every precondition and state transition in each\nsequence is drawn directly from the checked-and-compiled source, not from assumptions about\nbehavior.\n\n---\n\n## Bottom line\n\n**Do not deploy as-is.** Finding 1 alone is a full, zero-privilege break of the contract's\ncore value proposition (a buyer can always self-refund by naming themselves as arbiter), and\nFinding 3 can drain funds belonging to unrelated trades even without any single actor\nintending harm. Findings 2 and 4 are real but require an already-privileged arbiter/admin\nrole to trigger. I'd fix all four before mainnet deployment \u2014 the patched version above\ncompiles cleanly and preserves the intended design (arbiter proposes, admin independently\nconfirms, single signer can never move funds alone) that the current code only documents but\ndoesn't actually enforce.\n"}], "grading": null}, {"id": "eval-vault-escrow-without_skill", "prompt": "I wrote this escrow contract for peer-to-peer trades with dispute resolution. Can you audit it for security issues before I deploy?", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "# Security Audit \u2014 TradeEscrow.sol\n\nI read through the contract in detail, tracing every function's state transitions and every ETH transfer. Overall the design intent (buyer deposits \u2192 seller ships \u2192 buyer confirms, with a propose\u2011then\u2011confirm dispute path requiring both an arbiter *and* the admin multisig) is sound on paper, but the implementation has two critical bugs that break that model, plus several design gaps that weaken it further. I would **not** deploy this as-is. Details below, roughly in order of severity.\n\n---\n\n## Critical\n\n### 1. `confirmResolution` deletes the pending resolution *before* reading it \u2014 payouts silently go to `address(0)` for `0` wei\n\n```solidity\nfunction confirmResolution(uint256 tradeId) external onlyRole(DEFAULT_ADMIN_ROLE) {\n    PendingResolution storage pending = pendingResolutions[tradeId];\n    if (!pending.exists) revert NotDisputed();\n    Trade storage trade = trades[tradeId];\n\n    trade.status = Status.Resolved;\n    delete pendingResolutions[tradeId];                         // <-- zeroes the slot `pending` points at\n\n    (bool ok, ) = pending.recipient.call{value: pending.amount}(\"\"); // <-- reads the now-zeroed slot\n    if (!ok) revert TransferFailed();\n\n    emit ResolutionConfirmed(tradeId, pending.recipient, pending.amount); // <-- also reads zeroed slot\n}\n```\n\n`pending` is a `storage` **reference**, not a copy. It's a pointer to the `pendingResolutions[tradeId]` slot. `delete pendingResolutions[tradeId]` zeroes that slot in place, and because `pending` aliases the same storage location, every subsequent access to `pending.recipient` / `pending.amount` reads the *zeroed* values, not the ones that were staged. Solidity storage pointers do not snapshot values at assignment time \u2014 each member access is a fresh `SLOAD` at the time it's evaluated.\n\nConcretely: `pending.recipient` reads back as `address(0)` and `pending.amount` as `0`. The subsequent call becomes `address(0).call{value: 0}(\"\")`. A zero\u2011value call to an address with no code trivially succeeds (`ok == true`), so:\n\n- **No funds ever move.** The ETH that was supposed to go to the winning party stays locked in the contract.\n- **No revert occurs**, so nothing looks wrong from a transaction\u2011success standpoint \u2014 you'd only catch this by asserting the recipient's balance actually changed.\n- The trade is marked `Status.Resolved` anyway, so the trade can never be revisited \u2014 the funds are now **permanently stranded** with no code path to recover them (no sweep/rescue function exists either \u2014 see Medium #9 below).\n- The emitted `ResolutionConfirmed` event reports `recipient = address(0), amount = 0`, which is misleading to any off-chain indexer/monitoring trying to reconcile what happened.\n\n**This means every single dispute that goes through the intended \"arbiter proposes, admin confirms\" path \u2014 the mechanism the contract's own NatSpec describes as the safe, two-key way to move disputed funds \u2014 currently pays out nothing and permanently locks the money.** This is the single most severe bug in the contract; it makes the entire arbitration payout flow non-functional.\n\n**Fix:** cache the values (or the whole struct) into memory before deleting, e.g.:\n```solidity\naddress recipient = pending.recipient;\nuint256 amount = pending.amount;\ntrade.status = Status.Resolved;\ndelete pendingResolutions[tradeId];\n(bool ok, ) = recipient.call{value: amount}(\"\");\nif (!ok) revert TransferFailed();\nemit ResolutionConfirmed(tradeId, recipient, amount);\n```\n\n---\n\n### 2. `recuseAndRefund` has no role check at all, and `arbiter` is an arbitrary, buyer-chosen address \u2014 buyer can self-refund unilaterally\n\n```solidity\nfunction openTrade(address seller, address arbiter) external payable returns (uint256 tradeId) {\n    ...\n    trades[tradeId] = Trade({ buyer: msg.sender, seller: seller, arbiter: arbiter, ... });\n}\n\nfunction recuseAndRefund(uint256 tradeId) external {\n    Trade storage trade = trades[tradeId];\n    if (trade.buyer == address(0)) revert TradeNotFound();\n    if (trade.status != Status.Disputed) revert NotDisputed();\n    if (msg.sender != trade.arbiter) revert NotAuthorized();   // <-- only equality check, no onlyRole(ARBITER_ROLE)\n\n    trade.status = Status.Resolved;\n    uint256 amount = trade.amount;\n    (bool ok, ) = trade.buyer.call{value: amount}(\"\");\n    if (!ok) revert TransferFailed();\n}\n```\n\nTwo facts compound into a critical access-control break:\n\n1. `openTrade` accepts `arbiter` as a completely free-form `address` parameter \u2014 it is **never checked** against `ARBITER_ROLE` (or against anything) at trade-creation time. Any buyer can put any address here, including their own address or a second wallet they control.\n2. `recuseAndRefund` \u2014 unlike `proposeResolution` \u2014 carries **no `onlyRole(ARBITER_ROLE)` modifier**. It only checks `msg.sender == trade.arbiter`.\n\nPut together, a buyer can:\n1. Call `openTrade(seller, myOwnAddress)` (naming themselves, or a sockpuppet, as the \"arbiter\").\n2. Deposit the trade amount as normal.\n3. At any point while `Open` (e.g., **after the seller has already shipped goods off-chain**), call `raiseDispute` (buyer is allowed to dispute their own trade).\n4. Immediately call `recuseAndRefund` as `msg.sender == trade.arbiter` (themselves) \u2014 no role required \u2014 and receive a full refund of the escrowed amount.\n\nThis completely defeats the dispute-resolution trust model the contract's docstring describes (\"a single arbiter signer can't unilaterally move funds without a second, independent confirmation from the admin multisig\"). `recuseAndRefund` is a fully unilateral, single-transaction escape hatch that requires **zero privileged role** and **zero counter-signature**, and it's trivially reachable by the buyer themselves. In practice this means a buyer can always take their money back on demand, at any time before confirming delivery, regardless of whether the seller already performed \u2014 sellers have no real protection.\n\n(Note this is *independent* of bug #1 \u2014 even if #1 is fixed, this hole remains and is arguably worse, since it doesn't even require a bug in the confirm path; it's a straightforward missing authorization check.)\n\n**Fix, two changes needed together:**\n- Add `onlyRole(ARBITER_ROLE)` to `recuseAndRefund` (matching `proposeResolution`).\n- Validate in `openTrade` that `hasRole(ARBITER_ROLE, arbiter)` is true (or otherwise restrict who can be named as a trade's arbiter) \u2014 otherwise you can still end up with a \"recognized\" arbiter address that later loses the role, or a legitimate role-holder who was never meant to be tied to that specific trade.\n\n---\n\n## High\n\n### 3. `openTrade` never validates that `arbiter` actually holds `ARBITER_ROLE` \u2014 can permanently lock disputed funds\n\nRelated to #2 but worth calling out as its own risk even after #2 is fixed: because `arbiter` is unchecked at trade-creation time, a trade can easily end up with an `arbiter` field pointing at an address that doesn't hold `ARBITER_ROLE`. Once such a trade is disputed:\n\n- `proposeResolution` requires `onlyRole(ARBITER_ROLE)` \u2014 that specific named arbiter can never call it if they were never granted the role.\n- The admin-fallback clause (`!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)`) only helps if the admin **also** happens to hold `ARBITER_ROLE` (the modifier is checked first, on top of the internal check) \u2014 nothing guarantees that.\n- `recuseAndRefund` (once properly gated per fix #2) will also require the caller to hold `ARBITER_ROLE`.\n\nIf none of the above conditions are met, a disputed trade has **no path to resolution at all** \u2014 the funds are stuck in `Status.Disputed` forever, with no recovery mechanism. This should be prevented at the source: `openTrade` should require `hasRole(ARBITER_ROLE, arbiter)` before accepting the trade.\n\n---\n\n## Medium\n\n### 4. Split resolutions are documented but not actually implementable \u2014 any attempted split permanently strands the remainder\n\nThe NatSpec for `proposeResolution` says the arbiter can decide \"full refund to buyer, full release to seller, **or a split**.\" But `PendingResolution` only has a single `recipient` / `amount` pair, and `confirmResolution` only ever performs one transfer. There is no mechanism to pay two parties out of one resolution. If an arbiter ever proposes, say, `amount = trade.amount / 2` intending the other half to go to the other party, only the named `recipient` gets paid (modulo bug #1, in which nobody gets paid) \u2014 the remaining `trade.amount - pending.amount` is never sent anywhere, the trade is marked `Resolved`, and that remainder is permanently orphaned in the contract with no code path to ever claim it. The docstring's promised \"split\" functionality is simply not supported by the data model.\n\n### 5. Admin fallback in `proposeResolution` isn't gated on arbiter unresponsiveness \u2014 the two-key guarantee can quietly collapse to one key\n\n```solidity\nif (trade.arbiter != msg.sender && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) revert NotAuthorized();\n```\n\nThe docstring frames the admin fallback as being \"if the assigned arbiter goes dark,\" but the code enforces no such precondition \u2014 any address that holds both `ARBITER_ROLE` and `DEFAULT_ADMIN_ROLE` can propose a resolution for *any* disputed trade at any time, overriding a perfectly responsive, correctly-assigned arbiter. Since `DEFAULT_ADMIN_ROLE` is, by default in OpenZeppelin's `AccessControl`, the role-admin for `ARBITER_ROLE`, nothing stops the admin from simply granting itself `ARBITER_ROLE` and then single-handedly calling both `proposeResolution` and `confirmResolution` \u2014 i.e., moving disputed funds with **one key**, exactly the scenario the contract's own comments say is impossible by design (\"so a single arbiter signer can't unilaterally move funds ... without a second, independent confirmation\"). If the intent is genuine dual-control, the contract should enforce that the admin and the arbiter cannot be the same `msg.sender` for a given resolution (e.g., require `proposedBy != confirmer`), and/or should not let admin substitute for the arbiter unconditionally.\n\n### 6. `proposeResolution` never validates that `recipient` is the trade's buyer or seller\n\n```solidity\nfunction proposeResolution(uint256 tradeId, address recipient, uint256 amount) external onlyRole(ARBITER_ROLE) {\n    ...\n    if (amount > trade.amount) revert ZeroAmount();\n    pendingResolutions[tradeId] = PendingResolution({ recipient: recipient, ... });\n}\n```\n\n`recipient` is fully arbitrary \u2014 there's no check that it equals `trade.buyer` or `trade.seller`. A compromised arbiter key (or an arbiter colluding with, or being, the confirming admin per #5) could redirect disputed funds to any third-party address, and `confirmResolution` performs no independent sanity check either. Given resolution requires only one admin confirmation with no re-validation of the proposal's substance, I'd add a require that `recipient == trade.buyer || recipient == trade.seller` as cheap defense-in-depth.\n\n---\n\n## Low / Informational\n\n- **Misleading error selection:** `proposeResolution` reverts with `ZeroAmount()` when `amount > trade.amount` \u2014 that's not a \"zero amount\" condition at all. Doesn't affect security, but will confuse anyone debugging a revert (consider a dedicated `AmountExceedsTrade` error).\n- **No timeout / auto-release:** If the buyer never calls `confirmDelivery` and neither party disputes, funds sit in `Open` indefinitely. The seller does have `raiseDispute` as recourse, but that recourse is only as good as the dispute-resolution path being functional (see Critical #1 and #3) \u2014 worth adding a time-based escape hatch (e.g., auto-release to seller after N days of buyer inaction, or vice versa) as defense-in-depth.\n- **No sweep/rescue function:** Given bugs #1, #3, and #4 all create realistic scenarios where ETH gets permanently stranded in the contract, there is no admin recovery mechanism at all. Even with those bugs fixed, it's good practice to have a guarded rescue path for genuinely stuck funds (e.g., ETH sent outside the normal flow).\n- **No zero-address / self-trade checks in `openTrade`:** `seller` and `arbiter` aren't checked against `address(0)` or against `msg.sender` (buyer). A buyer could accidentally (or intentionally, per Critical #2) set `seller == address(0)` or `arbiter == buyer`. Cheap to guard against at the input-validation layer.\n- **No zero-address check on `admin` in the constructor:** if `admin` is ever passed as `address(0)`, `DEFAULT_ADMIN_ROLE` is granted to the zero address and the contract has no admin at all \u2014 nobody could ever grant `ARBITER_ROLE` or call `confirmResolution`. Worth an explicit `require(admin != address(0))`.\n- **Push-payment pattern with no reentrancy guard:** To the contract's credit, checks-effects-interactions is followed correctly in all three payout functions (status is updated / pending resolution deleted *before* the external `.call`), so direct same-trade reentrancy is blocked and a failed transfer correctly reverts the whole transaction (undoing the status change too). Still, given how much of this contract's remaining safety rests on getting the ordering exactly right, I'd add OpenZeppelin's `ReentrancyGuard` as belt-and-suspenders, and consider a pull-payment model (credit balances, let recipients withdraw) to avoid forcing external call semantics into the settlement functions altogether \u2014 that also sidesteps griefing where a seller/recipient contract with a reverting `receive()` can block `confirmDelivery`/`confirmResolution` for that specific trade.\n\n---\n\n## Summary\n\nThe two critical issues are not edge cases \u2014 they are the default, everyday behavior of the contract's core dispute-resolution flow:\n\n1. **`confirmResolution` reads a storage struct's fields *after* deleting it**, so every admin-confirmed resolution pays out `0` wei to `address(0)`, silently, with no revert \u2014 the escrowed funds are simply stuck forever, while the trade is marked `Resolved` and can never be retried.\n2. **`recuseAndRefund` has no `ARBITER_ROLE` check, and the `arbiter` address is chosen unchecked by the buyer at trade creation** \u2014 meaning a buyer can name themselves as their own trade's \"arbiter\" and unilaterally refund themselves at any time, with no counter-signature, completely bypassing the propose/confirm safeguard the contract's docs describe.\n\nTogether, these two bugs mean the arbitration system currently can never actually pay a seller through the intended dispute path, while a buyer can always get their money back on demand. I'd fix both before doing anything else, then address the High/Medium items (arbiter-role validation at trade creation, real split-resolution support or removing that claim from the docs, and tightening the admin/arbiter trust boundary) before considering this ready for funds at risk on mainnet. I'd also strongly recommend a fresh test suite that asserts actual ETH balance changes after `confirmResolution` (not just transaction success) \u2014 that's exactly the kind of check that would have caught bug #1 immediately.\n"}], "grading": null}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "bug-hunt", "skill_path": "<path/to/skill>", "executor_model": "<model-name>", "analyzer_model": "<model-name>", "timestamp": "2026-07-28T19:04:44Z", "evals_run": [0, 1], "runs_per_configuration": 3}, "runs": [{"eval_id": 0, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 969.222, "tokens": 131996, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke", "passed": true, "evidence": "Finding #2: names issue()/reissue()/revoke()/registerPlots() explicitly, quotes the doc comments, and proves via 5 Foundry tests that admin reverts with AccessControlUnauthorizedAccount before reaching the internal fallback."}, {"text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates", "passed": true, "evidence": "Finding #1, rated CRITICAL: precisely names reassignBeneficiary() + reissue(INHERITANCE) as the mechanism, explicitly frames it as a 'who vs whether' confused-deputy bug, and notes it overrides even a real owner-set beneficiary, not just the beneficiary-less edge case."}, {"text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')", "passed": true, "evidence": "Numbered 4-step sequence (issue -> reassignBeneficiary(attacker) -> reissue(INHERITANCE) -> burned/re-minted to attacker), backed by an actual Foundry test (test_IssuerBypassesAdminConfirmationViaBeneficiaryReassignment) run against compiled bytecode, not just narrated."}, {"text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight", "passed": true, "evidence": "Explicit tiers: Finding #1 Critical, Finding #2 Medium, Finding #3 Low/Medium, with severity reasoning spelled out for each (unprivileged-facing loss vector vs. broken safety net vs. requires a second privileged action)."}, {"text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix", "passed": true, "evidence": "Full Solidity fix snippets for all 3 findings, each stated as compiled and re-tested against the exploit (exploit blocked + legitimate fast-path regression-checked clean)."}], "notes": []}, {"eval_id": 1, "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 579.736, "tokens": 78886, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)", "passed": true, "evidence": "Finding 4, correctly diagnosed with the same modifier-vs-internal-check mismatch reasoning used on the Onile case."}, {"text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation", "passed": true, "evidence": "Finding 1, rated Critical, with a full exploit sequence (buyer names self as arbiter -> raiseDispute -> recuseAndRefund) and a compiled fix requiring onlyRole(ARBITER_ROLE) plus role validation at openTrade time."}, {"text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution", "passed": true, "evidence": "Finding 2 (High): explicitly identifies the missing overwrite guard, plus the additional subtlety that confirmResolution doesn't bind to the specific proposal reviewed, with a front-running exploit sequence and a fix requiring an explicit exists-check plus expected-recipient/amount binding."}, {"text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)", "passed": true, "evidence": "Explicitly checked and ruled out for all three ETH-transferring functions, with per-function reasoning, not just an unsupported claim."}, {"text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)", "passed": true, "evidence": "Finding 1's exploit sequence names the actor (any buyer), starting state, and the exact 4-call sequence with the resulting impact (seller shipped goods for nothing)."}], "notes": []}, {"eval_id": 0, "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 262.025, "tokens": 64491, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke", "passed": true, "evidence": "Finding #1 (rated High), same mechanism correctly named across all four functions, with the same doc-comment quoting and same root-cause explanation as the with-skill run."}, {"text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates", "passed": false, "evidence": "Finding #2 discusses reassignBeneficiary and cancelReissueProposal but frames the risk purely as 'a REVOKED issuer retains stale power' -- it explicitly says the blast radius is 'limited because reissue() itself is correctly gated,' missing that a CURRENT, non-revoked issuer can call reassignBeneficiary then immediately reissue(INHERITANCE) to bypass admin confirmation entirely. The actual critical bug (manufactured consent, no revocation required) is never stated."}, {"text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')", "passed": false, "evidence": "No numbered call sequence for any finding; findings are described conceptually with code snippets and prose ('if admin.revokeRole... is called... badIssuer can still...') rather than a step-by-step reproducible sequence, and nothing was executed against compiled bytecode."}, {"text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight", "passed": false, "evidence": "Top severity used is 'High' for the dead-admin-fallback finding; the actually-critical manufactured-beneficiary bypass was never identified as its own finding, so no Critical tier appears anywhere despite a Critical-grade bug existing in the contract."}, {"text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix", "passed": true, "evidence": "Each finding includes a Solidity fix suggestion (e.g. re-checking hasRole(ISSUER_ROLE,...) in reassignBeneficiary/cancelReissueProposal), though none were compiled or test-verified."}], "notes": []}, {"eval_id": 1, "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.8, "passed": 4, "failed": 1, "total": 5, "time_seconds": 227.92, "tokens": 49593, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)", "passed": true, "evidence": "Finding 5 (Medium): correctly diagnosed, including the specific consequence that the admin can self-grant ARBITER_ROLE to collapse the two-key guarantee to one key."}, {"text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation", "passed": true, "evidence": "Finding 2 (Critical), essentially identical quality and depth to the with-skill run's Finding 1 -- same root cause, same exploit sequence, same fix."}, {"text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution", "passed": false, "evidence": "Not mentioned anywhere in the response. The closest related finding (Finding 5) discusses the admin/arbiter trust boundary collapsing but not the specific overwrite-before-confirmation gap."}, {"text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)", "passed": true, "evidence": "Explicitly checked and credited as correct CEI ordering ('push-payment pattern with no reentrancy guard... checks-effects-interactions is followed correctly in all three payout functions'), no false positive."}, {"text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)", "passed": true, "evidence": "Finding 2's exploit sequence is a clear 4-step numbered sequence with actor, starting state, and resulting impact, comparable to the with-skill run."}], "notes": []}], "run_summary": {"with_skill": {"pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0}, "time_seconds": {"mean": 774.479, "stddev": 275.4082, "min": 579.736, "max": 969.222}, "tokens": {"mean": 105441.0, "stddev": 37554.4411, "min": 78886, "max": 131996}}, "without_skill": {"pass_rate": {"mean": 0.6, "stddev": 0.2828, "min": 0.4, "max": 0.8}, "time_seconds": {"mean": 244.9725, "stddev": 24.1159, "min": 227.92, "max": 262.025}, "tokens": {"mean": 57042.0, "stddev": 10534.4768, "min": 49593, "max": 64491}}, "delta": {"pass_rate": "+0.40", "time_seconds": "+529.5", "tokens": "+48399"}}, "notes": []}};
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+
+    // ---- Init ----
+    async function init() {
+      // Load saved feedback from server — but only if this isn't a fresh
+      // iteration (indicated by previous_feedback being present). When
+      // previous feedback exists, the feedback.json on disk is stale from
+      // the prior iteration and should not pre-fill the textareas.
+      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
+        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
+      if (!hasPrevious) {
+        try {
+          const resp = await fetch("/api/feedback");
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch { /* first run, no feedback yet */ }
+      }
+
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      showRun(0);
+
+      // Wire up feedback auto-save
+      const textarea = document.getElementById("feedback");
+      let saveTimeout = null;
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        document.getElementById("feedback-status").textContent = "";
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
+      });
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+      }
+    }
+
+    function updateNavButtons() {
+      document.getElementById("prev-btn").disabled = currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        currentIndex === EMBEDDED_DATA.runs.length - 1;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      renderOutputs(run);
+
+      // Previous outputs
+      renderPrevOutputs(run);
+
+      // Grades
+      renderGrades(run);
+
+      // Previous feedback
+      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+      // Scroll main content to top
+      document.querySelector(".main").scrollTop = 0;
+    }
+
+    // ---- Render outputs ----
+    function renderOutputs(run) {
+      const container = document.getElementById("outputs-body");
+      container.innerHTML = "";
+
+      const outputs = run.outputs || [];
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          content.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    function renderXlsx(container, b64Data) {
+      try {
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = XLSX.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          if (wb.SheetNames.length > 1) {
+            const sheetLabel = document.createElement("div");
+            sheetLabel.style.cssText =
+              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
+            sheetLabel.textContent = "Sheet: " + sheetName;
+            container.appendChild(sheetLabel);
+          }
+
+          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
+          const wrapper = document.createElement("div");
+          wrapper.innerHTML = htmlStr;
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("grades-arrow").classList.remove("open");
+
+      const summary = grading.summary || {};
+      const expectations = grading.expectations || [];
+
+      let html = '<div style="padding: 1rem;">';
+
+      // Summary line
+      const passRate = summary.pass_rate != null
+        ? Math.round(summary.pass_rate * 100) + "%"
+        : "?";
+      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
+      html += '<div class="grades-summary">';
+      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
+      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
+      html += '</div>';
+
+      // Assertions list
+      html += '<ul class="assertion-list">';
+      for (const exp of expectations) {
+        const statusClass = exp.passed ? "pass" : "fail";
+        const statusIcon = exp.passed ? "\u2713" : "\u2717";
+        html += '<li class="assertion-item">';
+        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
+        html += '<span>' + escapeHtml(exp.text) + '</span>';
+        if (exp.evidence) {
+          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
+        }
+        html += '</li>';
+      }
+      html += '</ul>';
+
+      html += '</div>';
+      content.innerHTML = html;
+    }
+
+    function toggleGrades() {
+      const content = document.getElementById("grades-content");
+      const arrow = document.getElementById("grades-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      // Reset to collapsed
+      content.classList.remove("open");
+      document.getElementById("prev-outputs-arrow").classList.remove("open");
+
+      // Render the files into the content area
+      content.innerHTML = "";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+
+      for (const file of prevOutputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("span");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download";
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const fc = document.createElement("div");
+        fc.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          fc.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          fc.appendChild(img);
+        } else if (file.type === "pdf") {
+          const iframe = document.createElement("iframe");
+          iframe.src = file.data_uri;
+          fc.appendChild(iframe);
+        } else if (file.type === "xlsx") {
+          renderXlsx(fc, file.data_b64);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          fc.appendChild(a);
+        }
+
+        fileDiv.appendChild(fc);
+        wrapper.appendChild(fileDiv);
+      }
+
+      content.appendChild(wrapper);
+    }
+
+    function togglePrevOutputs() {
+      const content = document.getElementById("prev-outputs-content");
+      const arrow = document.getElementById("prev-outputs-arrow");
+      content.classList.toggle("open");
+      arrow.classList.toggle("open");
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function saveCurrentFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // Build reviews array from map
+      const reviews = [];
+      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
+        if (feedback.trim()) {
+          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
+        }
+      }
+
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reviews, status: "in_progress" }),
+      }).then(() => {
+        document.getElementById("feedback-status").textContent = "Saved";
+      }).catch(() => {
+        // Static mode or server unavailable — no-op on auto-save,
+        // feedback will be downloaded on final submit
+        document.getElementById("feedback-status").textContent = "Will download on submit";
+      });
+    }
+
+    // ---- Done ----
+    function showDoneDialog() {
+      // Save current textarea to feedbackMap (but don't POST yet)
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+
+      // POST once with status: complete — include ALL runs so the model
+      // can distinguish "no feedback" (looks good) from "not reviewed"
+      const reviews = [];
+      const ts = new Date().toISOString();
+      for (const r of EMBEDDED_DATA.runs) {
+        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
+      }
+      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
+      fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: payload,
+      }).then(() => {
+        document.getElementById("done-overlay").classList.add("visible");
+      }).catch(() => {
+        // Server not available (static mode) — download as file
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        a.click();
+        URL.revokeObjectURL(url);
+        document.getElementById("done-overlay").classList.add("visible");
+      });
+    }
+
+    function closeDoneDialog() {
+      // Reset status back to in_progress
+      saveCurrentFeedback();
+      document.getElementById("done-overlay").classList.remove("visible");
+    }
+
+    // ---- Toast ----
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("visible");
+      setTimeout(() => toast.classList.remove("visible"), 2000);
+    }
+
+    // ---- Keyboard nav ----
+    document.addEventListener("keydown", (e) => {
+      // Don't capture when typing in textarea
+      if (e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.preventDefault();
+        navigate(-1);
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        navigate(1);
+      }
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
+      document.getElementById("panel-" + view).classList.add("active");
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+
+      // Show the tabs
+      document.getElementById("view-tabs").style.display = "flex";
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary || {};
+      const metadata = data.metadata || {};
+      const notes = data.notes || [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
+      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
+      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
+      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
+      html += "</p>";
+
+      // Summary table
+      html += '<table class="benchmark-table">';
+
+      function fmtStat(stat, pct) {
+        if (!stat) return "—";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
+        return m + suffix + " ± " + s + suffix;
+      }
+
+      function deltaClass(val) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if (n > 0) return "benchmark-delta-positive";
+        if (n < 0) return "benchmark-delta-negative";
+        return "";
+      }
+
+      // Discover config names dynamically (everything except "delta")
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const configA = configs[0] || "config_a";
+      const configB = configs[1] || "config_b";
+      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const a = summary[configA] || {};
+      const b = summary[configB] || {};
+      const delta = summary.delta || {};
+
+      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
+      html += "<tbody>";
+
+      html += "<tr><td><strong>Pass Rate</strong></td>";
+      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
+      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
+      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
+
+      // Time (only show row if data exists)
+      if (a.time_seconds || b.time_seconds) {
+        html += "<tr><td><strong>Time (s)</strong></td>";
+        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
+        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
+      }
+
+      // Tokens (only show row if data exists)
+      if (a.tokens || b.tokens) {
+        html += "<tr><td><strong>Tokens</strong></td>";
+        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
+        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
+        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
+      }
+
+      html += "</tbody></table>";
+
+      // Per-eval breakdown (if runs data available)
+      const runs = data.runs || [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
+        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table">';
+          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
+          if (hasTime) html += "<th>Time (s)</th>";
+          if (hasErrors) html += "<th>Crashes During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => r.configuration === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result || {};
+              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<td>" + configLabel + "</td>";
+              html += "<td>" + run.run_number + "</td>";
+              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
+              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
+              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
+            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
+            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<td>" + configLabel + "</td>";
+            html += "<td>Avg</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of (run.expectations || [])) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
+            html += "<thead><tr><th>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = (run.expectations || []).find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const icon = exp.passed ? "\u2713" : "\u2717";
+                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
+                  } else {
+                    html += "— ";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    init();
+    renderBenchmark();
+  </script>
+</body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "eval_id": 0,
+  "eval_name": "eval-onile-original",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke",
+      "passed": true,
+      "evidence": "Finding #2: names issue()/reissue()/revoke()/registerPlots() explicitly, quotes the doc comments, and proves via 5 Foundry tests that admin reverts with AccessControlUnauthorizedAccount before reaching the internal fallback."
+    },
+    {
+      "text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates",
+      "passed": true,
+      "evidence": "Finding #1, rated CRITICAL: precisely names reassignBeneficiary() + reissue(INHERITANCE) as the mechanism, explicitly frames it as a 'who vs whether' confused-deputy bug, and notes it overrides even a real owner-set beneficiary, not just the beneficiary-less edge case."
+    },
+    {
+      "text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')",
+      "passed": true,
+      "evidence": "Numbered 4-step sequence (issue -> reassignBeneficiary(attacker) -> reissue(INHERITANCE) -> burned/re-minted to attacker), backed by an actual Foundry test (test_IssuerBypassesAdminConfirmationViaBeneficiaryReassignment) run against compiled bytecode, not just narrated."
+    },
+    {
+      "text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight",
+      "passed": true,
+      "evidence": "Explicit tiers: Finding #1 Critical, Finding #2 Medium, Finding #3 Low/Medium, with severity reasoning spelled out for each (unprivileged-facing loss vector vs. broken safety net vs. requires a second privileged action)."
+    },
+    {
+      "text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix",
+      "passed": true,
+      "evidence": "Full Solidity fix snippets for all 3 findings, each stated as compiled and re-tested against the exploit (exploit blocked + legitimate fast-path regression-checked clean)."
+    }
+  ],
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 5,
+    "failed": 0,
+    "total": 5
+  }
+}

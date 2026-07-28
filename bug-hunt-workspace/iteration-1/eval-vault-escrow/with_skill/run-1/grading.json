@@ -1,0 +1,39 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-vault-escrow",
+  "run": "with_skill",
+  "expectations": [
+    {
+      "text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)",
+      "passed": true,
+      "evidence": "Finding 4, correctly diagnosed with the same modifier-vs-internal-check mismatch reasoning used on the Onile case."
+    },
+    {
+      "text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation",
+      "passed": true,
+      "evidence": "Finding 1, rated Critical, with a full exploit sequence (buyer names self as arbiter -> raiseDispute -> recuseAndRefund) and a compiled fix requiring onlyRole(ARBITER_ROLE) plus role validation at openTrade time."
+    },
+    {
+      "text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution",
+      "passed": true,
+      "evidence": "Finding 2 (High): explicitly identifies the missing overwrite guard, plus the additional subtlety that confirmResolution doesn't bind to the specific proposal reviewed, with a front-running exploit sequence and a fix requiring an explicit exists-check plus expected-recipient/amount binding."
+    },
+    {
+      "text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)",
+      "passed": true,
+      "evidence": "Explicitly checked and ruled out for all three ETH-transferring functions, with per-function reasoning, not just an unsupported claim."
+    },
+    {
+      "text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)",
+      "passed": true,
+      "evidence": "Finding 1's exploit sequence names the actor (any buyer), starting state, and the exact 4-call sequence with the resulting impact (seller shipped goods for nothing)."
+    }
+  ],
+  "notes": "This run did NOT catch the accidental 4th bug in this test fixture: confirmResolution reads pending.recipient/pending.amount from a storage reference AFTER calling delete on that same slot, so every admin-confirmed resolution actually pays 0 wei to address(0) and silently succeeds. The without_skill baseline run on this same eval found this bug as its #1 headline Critical finding. The with-skill run's own proposed fix for Finding 3 still shows the same delete-then-read code without correcting the order, meaning its 'compiled successfully' claim did not catch this because compilation alone can't -- this run only compile-checked its patch here, unlike the Onile eval where it wrote and ran actual Foundry exploit/regression tests. This is a genuine, useful signal: the skill's Stage 4 compile-check is not a substitute for runtime/test verification, and this run's rigor was inconsistent across the two test cases.",
+  "summary": {
+    "pass_rate": 1.0,
+    "passed": 5,
+    "failed": 0,
+    "total": 5
+  }
+}
