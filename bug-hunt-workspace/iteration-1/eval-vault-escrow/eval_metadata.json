@@ -1,0 +1,27 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-vault-escrow",
+  "prompt": "I wrote this escrow contract for peer-to-peer trades with dispute resolution. Can you audit it for security issues before I deploy?",
+  "assertions": [
+    {
+      "text": "Identifies the dead admin-fallback bug in proposeResolution (onlyRole(ARBITER_ROLE) blocking the internal 'or admin' fallback)",
+      "type": "llm_judge"
+    },
+    {
+      "text": "Identifies recuseAndRefund as a single-signer bypass of the two-step admin-confirmed resolution design -- the arbiter can unilaterally refund with no admin confirmation",
+      "type": "llm_judge"
+    },
+    {
+      "text": "Notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution",
+      "type": "llm_judge"
+    },
+    {
+      "text": "Does NOT falsely flag reentrancy in confirmDelivery or confirmResolution (state is correctly updated before both external calls -- a false positive here is a precision failure)",
+      "type": "llm_judge"
+    },
+    {
+      "text": "States a concrete exploit call sequence for at least the recuseAndRefund finding (actor, starting state, calls in order, resulting impact)",
+      "type": "llm_judge"
+    }
+  ]
+}

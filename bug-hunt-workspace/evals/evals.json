@@ -1,0 +1,19 @@
+{
+  "skill_name": "bug-hunt",
+  "evals": [
+    {
+      "id": 0,
+      "eval_name": "eval-onile-original",
+      "prompt": "Can you review this smart contract for bugs? It's a land certificate NFT system I'm building.",
+      "expected_output": "Should identify (a) the dead admin-fallback bug: onlyRole(ISSUER_ROLE) modifiers on registerPlots/issue/reissue/revoke silently defeat the documented 'or admin' fallback because the modifier reverts before the internal admin check is ever reached, and (b) the critical manufactured-beneficiary theft path: reassignBeneficiary is callable by issuer-or-admin with no requirement that a beneficiary already exist, and reissue()'s requiresAdminConfirmation skips admin confirmation once ANY beneficiary is registered -- so an issuer can invent a beneficiary they control and immediately steal any certificate they themselves issued, bypassing the two-step admin confirmation the design relies on. A strong answer also finds the silent-proposal-overwrite gap in reissue() and the stale-address (not live role) check in cancelReissueProposal.",
+      "files": ["iteration-1/eval-onile-original/LandCertificate.sol"]
+    },
+    {
+      "id": 1,
+      "eval_name": "eval-vault-escrow",
+      "prompt": "I wrote this escrow contract for peer-to-peer trades with dispute resolution. Can you audit it for security issues before I deploy?",
+      "expected_output": "Should identify (a) the dead admin-fallback bug in proposeResolution: onlyRole(ARBITER_ROLE) blocks the internal 'or admin' fallback from ever being reached, contradicting the doc comment, and (b) recuseAndRefund as a single-signer bypass of the entire two-step admin-confirmation design -- the trade's arbiter (checked only by stale address equality, not live role membership) can unilaterally refund the buyer with zero admin confirmation, defeating the documented security model that no single arbiter signer can move funds alone. A strong answer also notes proposeResolution has no guard against a second call silently overwriting an already-staged pending resolution. A strong answer should NOT falsely flag reentrancy in confirmDelivery/confirmResolution -- state is correctly updated before both external calls in this contract, and inventing a reentrancy finding there would be a false positive worth noting as a quality problem if present in the without-skill baseline too.",
+      "files": ["iteration-1/eval-vault-escrow/TradeEscrow.sol"]
+    }
+  ]
+}

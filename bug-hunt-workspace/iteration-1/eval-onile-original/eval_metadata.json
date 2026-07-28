@@ -1,0 +1,27 @@
+{
+  "eval_id": 0,
+  "eval_name": "eval-onile-original",
+  "prompt": "Can you review this smart contract for bugs? It's a land certificate NFT system I'm building.",
+  "assertions": [
+    {
+      "text": "Identifies the dead admin-fallback bug (onlyRole(ISSUER_ROLE) blocking the documented '(or admin)' fallback) in at least one of registerPlots/issue/reissue/revoke",
+      "type": "llm_judge"
+    },
+    {
+      "text": "Identifies the reassignBeneficiary + reissue() manufactured-beneficiary combo as a critical unilateral theft path an issuer can execute against their own issued certificates",
+      "type": "llm_judge"
+    },
+    {
+      "text": "States a concrete exploit call sequence (specific function calls in order, not just 'this could allow theft')",
+      "type": "llm_judge"
+    },
+    {
+      "text": "Assigns differentiated severity -- treats the manufactured-beneficiary bug as materially more severe than the dead-admin-fallback bug, rather than flat-listing all findings at the same weight",
+      "type": "llm_judge"
+    },
+    {
+      "text": "Delivers corrected code (not prose-only description) if the user's framing ('I'm building') suggests they'd want a fix",
+      "type": "llm_judge"
+    }
+  ]
+}
