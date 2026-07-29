@@ -134,9 +134,24 @@ actually works.
 - **Re-trace fresh, independently of the reasoning that found it.** Don't just re-read your
   own Stage 2 argument and nod — walk the exploit sequence again from a blank slate, as if
   checking someone else's claim, and confirm every step still holds.
-- **Compile-check any proposed fix.** Don't assert correctness from reading the diff alone.
-  Set up an isolated build (pin the exact dependency versions the target project uses),
-  compile the fixed code, and confirm zero errors before presenting it as working.
+- **Runtime-verify any proposed fix — compiling is necessary, never sufficient.** A fix that
+  compiles cleanly can still be wrong: a classic case is reading a storage struct's fields
+  *after* `delete`-ing that same slot — the code compiles fine, but every field read back is
+  zeroed, because a Solidity storage reference aliases the live slot rather than snapshotting
+  it at assignment time. This project's own eval history has a documented case of exactly this:
+  one run compile-checked a fix and called it verified, while a separate run on the same file
+  caught the actual bug by reasoning about execution order, not syntax. Set up an isolated
+  build (pin the exact dependency versions the target project uses), then go further than
+  compiling: write and run an actual test (Foundry/Hardhat/whatever the target project uses)
+  that (a) reproduces the Stage 3 exploit sequence against the ORIGINAL code and confirms it
+  succeeds, then (b) re-runs that same sequence against the FIXED code and confirms it's now
+  blocked, and (c) runs a control case confirming the legitimate/intended fast path still works
+  unchanged. "It compiles" answers "is this syntactically valid Solidity," not "does this
+  actually do what I claimed" — only executing it answers the second question.
+- **When live execution genuinely isn't available**, say so explicitly rather than letting a
+  compile-only check read as if it were runtime-verified — e.g. "compiled clean; not executed
+  against a live EVM in this session" is an honest, weaker claim than presenting a compile pass
+  as validation of behavior.
 - **Calibrate severity honestly, in both directions.** State plainly whether this is a
   genuine unprivileged-facing loss vector or a privileged-actor/self-harm-only issue, whether
   it needs a multi-party collusion or a single compromised key, and what blast radius it
